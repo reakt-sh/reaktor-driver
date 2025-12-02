@@ -1,0 +1,23 @@
+_doc_: [
+  "List of error codes and messages used by the driver",
+  "Error codes will encoded in a one-hot bit-vector and should be continuous.",
+]
+
+# IMPORTANT:
+# Adjust the number of bits for error codes in communication.bitproto if you add more errors!
+
+# Errors:
+error_control_mode_switch_unsafe: 0
+error_control_mode_switch_unsafe_message: "Control mode switch attempted while in unsafe driving mode."
+error_remote_control_timeout: 1
+error_remote_control_timeout_message: "While in active remote control mode, no control (or heartbeat) message was received in the expected interval."
+error_hardware_no_throttle_dac: 2
+error_hardware_no_throttle_dac_message: "No connection to motor throttle control component (DAC via I2C)."
+
+# Automatically generated mapping of error codes to messages
+doc_error_map:
+  comment: "Mapping of error codes to human-readable messages."
+error_map: [
+  "_generate_", "array-mapping", ["_message", "char*"]
+]
+  

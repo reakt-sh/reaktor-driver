@@ -1,0 +1,7 @@
+_doc_: "Configuration parameters for the vehicle"
+
+# Vehicle:
+motor_speed_transmission_factor:
+  value: 0.003839724 # (11 / 45 * 0.3 * pi / 60)
+  c_type: double
+  comment: "Factor to convert motor speed in RPM to vehicle speed in m/s. Formula: (teeth-on-motor / teeth-on-axis) * wheel-diameter * pi / 60"

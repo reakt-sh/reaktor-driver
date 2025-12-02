@@ -1,0 +1,45 @@
+proto reaktor_driver
+
+enum Mode : uint3 {
+    DRIVE_MODE_NEUTRAL = 0;
+    DRIVE_MODE_FORWARD = 1;
+    DRIVE_MODE_REVERSE = 2;
+    DRIVE_MODE_PARKING = 3;
+    DRIVE_MODE_EMERGENCY_STOP = 4;
+    // In a heartbeat message, the driver will ignore remaining payload (just a keep-alive message)
+    HEARTBEAT = 5;
+    UNUSED_B = 6;
+    UNUSED_C = 7;
+}
+
+enum ErrorState : uint2 {
+    NO_ERROR = 0;
+    ERROR = 1;
+    FATAL_ERROR = 3;
+}
+
+message StatusMessage {
+    //// System state
+    // If an error occurred an error appendix message will follow directly after this message!
+    ErrorState error = 1;
+    bool remote_control = 2;
+    // Time since system start in ms. Receiving end must handle overflows
+    uint32 time = 3;
+
+    //// Motor control state
+    Mode mode = 10;
+    uint13 motor_rpm = 11;
+    uint13 target_rpm = 12;
+
+    //// Internal state
+    uint13 control_rpm = 21;
+}
+
+message ErrorAppendixMessage {
+    uint64 errors = 1;
+}
+
+message ControlMessage {
+    Mode mode = 1;
+    uint13 target_rpm = 2;
+}

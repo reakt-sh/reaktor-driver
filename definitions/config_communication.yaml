@@ -1,0 +1,19 @@
+_doc_: "Configuration parameters for the communication between driver and connector"
+
+# Communication:
+comm_serial_baudrate:
+  value: 115200
+  c_type: uint32_t
+  comment: "Serial communication speed."
+comm_status_message_time_bitsize: # Must match the size in communication.bitproto
+  value: 32
+  c_type: unsigned int
+  comment: "Number of bits used to encode the internal time in status messages."
+comm_status_message_spacing_time:
+  value: 10
+  c_type: unsigned int
+  comment: "Minimal time between two status messages in ms (unless enforced response)."
+comm_control_message_heartbeat_time:
+  value: 1000
+  c_type: unsigned int
+  comment: "When in remote control mode, the maximum time in ms between two control messages before the driver stops the motor for safety reasons."

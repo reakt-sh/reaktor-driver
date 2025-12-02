@@ -1,0 +1,91 @@
+_doc_: "Configuration parameters for the driver board and connected hardware"
+
+# Board
+doc_board:
+  comment: "Driver board pin specifications"
+board_pin_in_motor_meter:
+  value: 2
+  c_type: int
+  comment: "Pin for reading motor speed."
+board_pin_in_manual_throttle:
+  value: A0
+  c_type: int
+  comment: "Pin for reading throttle lever position."
+board_pin_in_dac:
+  value: A1
+  c_type: int
+  comment: "Pin for reading output of DAC."
+board_pin_in_onboard_enable_remote_control:
+  value: 7
+  c_type: int
+  comment: "Pin for reading onboard switch for enabling remote control."
+board_pin_in_manual_forward:
+  value: 51
+  c_type: int
+  comment: "Pin for reading manual forward switch."
+board_pin_in_manual_reverse:
+  value: 47
+  c_type: int
+  comment: "Pin for reading manual reverse switch."
+board_pin_out_motor_forward:
+  value: 6
+  c_type: int
+  comment: "Pin for engaging forward drive of the motor."
+board_pin_out_motor_reverse:
+  value: 5
+  c_type: int
+  comment: "Pin for engaging reverse drive in the motor."
+board_pin_out_motor_brake:
+  value: 4
+  c_type: int
+  comment: "Pin for engaging brake of the motor."
+board_pin_out_motor_regenerative:
+  value: 3
+  c_type: int
+  comment: "Pin for engaging regenerative braking of the motor."
+
+# Analog-Digital Conversion
+doc_dac:
+  comment: "Analog conversion specifications"
+v_ref:
+  value: 5.0
+  c_type: float
+  comment: "Analog reference voltage."
+dac_steps:
+  value: 4095
+  c_value: "(1 << int(12)) - 1"
+  c_type: uint32_t
+  comment: "Number of steps in MCP 4725 (12 bit)."
+adc_steps:
+  value: 1023
+  c_value: "(1 << int(10)) - 1"
+  c_type: uint32_t
+  comment: "Number of steps in Arduino ADC (10 bit)."
+
+# Motor
+doc_motor:
+  comment: "Motor specifications"
+motor_max_rpm:
+  value: 1125 # 4500 # Reduced RPM for safety during testing (Synchronize with Motor Controller settings!)
+  c_type: unsigned int
+  comment: "Maximum motor speed in RPM."
+motor_min_rpm:
+  value: 45
+  c_type: unsigned int  
+  comment: "Motor will not move at speed lower than this. This will also influences the waiting time until the motor is considered stopped."
+motor_signal_edges_per_revolution:
+  value: 3
+  c_type: int
+  comment: "Number of signal edges (rising edges) per motor revolution. E.g. for a hall sensor with 3 magnets this is 3. Note that only every third edge is a full revolution." 
+
+# Throttle lever
+doc_throttle:
+  comment: "Throttle lever specifications"
+throttle_lever_lower_deadzone:
+  value: 0.01
+  c_type: double
+  comment: "Lower deadzone for throttle lever (0.0 - 1.0)."
+throttle_lever_upper_deadzone:
+  value: 0.09
+  c_type: double
+  comment: "Upper deadzone for throttle lever (0.0 - 1.0)."

@@ -1,0 +1,81 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://reakt.sh/schema/reaktor-driver/definition.schema.json",
+    "title": "Definitions",
+    "description": "Basic definitions for properties of the REAKTOR.",
+    "type": "object",
+    "additionalProperties": false,
+    "patternProperties": {
+        "^_doc_$": {
+            "type": [
+                "string",
+                "array"
+            ],
+            "items": {
+                "type": "string"
+            },
+            "description": "The comment line or lines to attach to the definition file."
+        },
+        "^[a-z][a-z0-9]*(_[a-z0-9]+)*$": {
+            "type": [
+                "number",
+                "boolean",
+                "string",
+                "object",
+                "array"
+            ],
+            "description": "The definition consisting of a name (key) and either the value directly, an object with more details, or an array that will result in a function call to generate a value.",
+            "additionalProperties": false,
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "The name of the definition. Overrides the key name if present."
+                },
+                "value": {
+                    "type": [
+                        "number",
+                        "boolean",
+                        "string"
+                    ],
+                    "description": "The value of the definition."
+                },
+                "c_value": {
+                    "type": "string",
+                    "description": "The value of the definition for C code generation."
+                },
+                "c_type": {
+                    "type": "string",
+                    "description": "The type of the definition variable in C code generation."
+                },
+                "comment": {
+                    "type": [
+                        "string",
+                        "array"
+                    ],
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "The comment line or lines to attach to the definition."
+                }
+            },
+            "items": false,
+            "prefixItems": [
+                {
+                    "const": "_generate_"
+                },
+                {
+                    "type": "string"
+                },
+                {
+                    "type": [
+                        "string",
+                        "array"
+                    ],
+                    "items": {    
+                        "type": "string"
+                    }
+                }
+            ]
+        }
+    }
+}

@@ -1,0 +1,15 @@
+{
+	"folders": [
+		{
+			"path": "../driver"
+		},
+		{
+			"path": "../definitions"
+		},
+		{
+			"path": "../connector"
+		}
+	],
+	"settings": {
+	}
+}
