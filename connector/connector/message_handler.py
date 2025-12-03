@@ -2,10 +2,12 @@ import logging
 import asyncio
 from datetime import datetime
 from typing import Callable
+from math import floor
 from .data import Control, InternalState, Status
 from .serial_connection_handler import SerialConnectionHandler
 from .generated.communication_bp import StatusMessage, ControlMessage, ErrorAppendixMessage, ErrorState, Mode
 from .generated.config_communication import COMM_STATUS_MESSAGE_TIME_BITSIZE
+from .generated.config_vehicle import MOTOR_SPEED_TRANSMISSION_FACTOR
 from .generated.errors import ERROR_MAP
 
 logger = logging.getLogger("connector:internal:messages")
@@ -73,10 +75,12 @@ class MessageHandler:
                     error=status_msg.error,
                     errors=status_errors,
                     mode=status_msg.mode,
-                    target_rpm=status_msg.target_rpm,
-                    motor_rpm=status_msg.motor_rpm,
+                    target_speed=(status_msg.target_rpm * MOTOR_SPEED_TRANSMISSION_FACTOR),
+                    motor_speed=(status_msg.motor_rpm * MOTOR_SPEED_TRANSMISSION_FACTOR),
                     internal_state=InternalState(
                         time_ms=status_msg.time + time_overflow_offset,
+                        target_rpm=status_msg.target_rpm,
+                        motor_rpm=status_msg.motor_rpm,
                         control_rpm=status_msg.control_rpm
                     )
                 )
@@ -93,9 +97,10 @@ class MessageHandler:
         if not self._serial.is_ready():
             logger.error("Cannot send control message: serial connection not yet ready")
             return False
+        rpm = floor(control.target_speed / MOTOR_SPEED_TRANSMISSION_FACTOR)
         msg = ControlMessage(
             mode=control.mode,
-            target_rpm=control.target_rpm
+            target_rpm=rpm
         )
         logger.info("Sending control message: %s", msg.to_dict())
         self._serial.send(msg.encode())

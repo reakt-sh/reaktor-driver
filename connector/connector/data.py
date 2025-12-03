@@ -1,7 +1,7 @@
 from datetime import datetime
 from enum import IntEnum, unique
 from typing import Optional, List
-from pydantic import BaseModel
+from pydantic import BaseModel, PositiveFloat
 from .generated.communication_bp import Mode as MessageMode, ErrorState
 
 @unique
@@ -16,12 +16,14 @@ class Mode(IntEnum):
 class Control(BaseModel):
     """Control command for the vehicle."""
     mode: Mode
-    target_rpm: int = 0
+    target_speed: PositiveFloat = 0 # in m/s
 
 class InternalState(BaseModel):
     """Internal state of the driver."""
     time_ms: int
     control_rpm: int
+    target_rpm: int
+    motor_rpm: int
 
 class Status(BaseModel):
     """Status of the vehicle."""
@@ -33,7 +35,7 @@ class Status(BaseModel):
     errors: List[str] = []
     # Motor control state
     mode: Mode
-    target_rpm: int
-    motor_rpm: int
+    target_speed: float # in m/s
+    motor_speed: float # in m/s
     # Internal state
     internal_state: Optional[InternalState] = None
