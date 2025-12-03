@@ -31,8 +31,11 @@ jobs:
         with:
           name: connector-canary-release
           path: ./connector/dist/
+          if-no-files-found: error
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     needs:
       - build-connector
     steps:
@@ -42,10 +45,14 @@ jobs:
           name: connector-canary-release
           path: dist/
       - name: Deploy canary release
-        uses: marvinpinto/action-automatic-releases@latest
+        uses: softprops/action-gh-release@v2
         with:
-          automatic_release_tag: 'canary'
+          name: "Canary Release"
+          body: "Canary release candidate for testing"
+          append_body: false
           prerelease: true
-          title: "Canary Release"
+          tag_name: canary
+          fail_on_unmatched_files: true
+          overwrite_files: true
           files: |
             dist/*
