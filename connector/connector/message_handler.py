@@ -1,3 +1,7 @@
+"""
+INTERNAL message handler for decoding and encoding messages to/from the vehicle.
+"""
+
 import logging
 import asyncio
 from datetime import datetime
@@ -13,6 +17,8 @@ from .generated.errors import ERROR_MAP
 logger = logging.getLogger("connector:internal:messages")
 
 class MessageHandler:
+    """Handler for encoding and decoding messages to/from the vehicle."""
+
     _serial: SerialConnectionHandler # Internal serial connection handler
     _status_callback: Callable[[Status], None] # Callback for new status
     _worker: asyncio.Task # Background worker task for processing messages
@@ -132,4 +138,3 @@ class MessageHandler:
     def shutdown(self):
         """Stop decoding incoming messages."""
         self._worker.cancel()
-
