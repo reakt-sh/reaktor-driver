@@ -41,7 +41,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: driver-firmware
-        path: ./.pio/build/ReaktorDriver/firmware.*
+        path: ./driver/.pio/build/ReaktorDriver/firmware.*
         if-no-files-found: error
 
   release:
