@@ -79,7 +79,7 @@ void controlSpeed() {
 
     // 2. Handle speed via pid controller
 
-    // Due to deadzone in the motor, the PID controller would sometimes restarts the motor after being stopped
+    // Due to deadzone in the motor, the PID controller would sometimes restart the motor after being stopped
     // This code ensures that the motor is kept at 0 RPM until a non-zero target speed is set
     if (keepZero && targetRPM > 0) {
         // Activate PID control when first non-zero target is set
