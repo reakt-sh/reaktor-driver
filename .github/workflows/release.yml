@@ -3,7 +3,12 @@ name: Release
 on:
   push:
     tags:
-      - "v*.*.*"
+      - "v*"
+    branches: 
+      - "main"
+  pull_request:
+    branches: 
+      - "main"
 
 jobs:
   package-connector:
@@ -34,7 +39,9 @@ jobs:
         path: ./connector/dist/
         if-no-files-found: error
 
-  attach-release:
+  release:
+    if: startsWith(github.event.ref, 'refs/tags/v')
+    name: Attach Artifacts to Release
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -47,7 +54,7 @@ jobs:
           name: connector-package
           path: dist/
 
-      - name: Deploy canary release
+      - name: Attach files to release
         uses: softprops/action-gh-release@v3
         with:
           append_body: false
