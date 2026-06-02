@@ -1,17 +1,40 @@
-name: Release
+name: Connector CI
 
 on:
   push:
-    tags:
-      - "v*"
-    branches: 
-      - "main"
+    branches: [ "*" ]
+    tags: ["v*"]
   pull_request:
-    branches: 
-      - "main"
+    branches: [ "main" ]
+  workflow_dispatch: # manual trigger
 
 jobs:
-  package-connector:
+  lint:
+    name: Linting
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+          python-version: "3.13"
+          cache: "pip" # caching pip dependencies
+
+    - name: Install dependencies
+      working-directory: ./connector
+      run: pip install -r requirements.txt
+
+    - name: Install linter
+      run: pip install pylint
+
+    - name: Lint with Pylint
+      working-directory: ./connector
+      run: pylint --rcfile=./pylintrc.toml -j 0 --output-format=github **/*.py
+
+  package:
+    name: Packaging
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repo
@@ -42,12 +65,12 @@ jobs:
 
   release:
     if: startsWith(github.event.ref, 'refs/tags/v')
-    name: Attach Artifacts to Release
+    name: Releasing
     runs-on: ubuntu-latest
     permissions:
       contents: write
     needs:
-      - package-connector
+      - package
     steps:
       - name: Retrieve release distributions
         uses: actions/download-artifact@v4
