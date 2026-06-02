@@ -1,0 +1,68 @@
+name: Driver CI
+
+on:
+  push:
+    branches: [ "*" ]
+    tags: ["v*"]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch: # manual trigger
+
+jobs:
+  build:
+    name: Building
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+
+    - name: Configure caching
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/pip
+          ~/.platformio/.cache
+        key: ${{ runner.os }}-pio
+
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+          python-version: "3.11"
+          cache: "pip" # caching pip dependencies
+
+    - name: Install PlatformIO Core
+      run: pip install --upgrade platformio
+
+    - name: Build PlatformIO Project
+      working-directory: ./driver
+      run: pio run
+
+    - name: Upload release artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: driver-firmware
+        path: ./.pio/build/ReaktorDriver/firmware.*
+        if-no-files-found: error
+
+  release:
+    if: startsWith(github.event.ref, 'refs/tags/v')
+    name: Releasing
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    needs:
+      - build
+    steps:
+      - name: Retrieve release distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: driver-firmware
+          path: dist/
+
+      - name: Attach files to release
+        uses: softprops/action-gh-release@v3
+        with:
+          append_body: false
+          fail_on_unmatched_files: true
+          files: |
+            dist/*
