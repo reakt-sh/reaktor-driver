@@ -1,4 +1,4 @@
-name: Definitions Check
+name: Definitions CI
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   chceck:
-    name: Check Definitions
+    name: Checking
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repo
