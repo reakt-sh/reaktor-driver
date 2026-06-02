@@ -1,0 +1,36 @@
+name: Definitions Check
+
+on:
+  push:
+    branches: [ "*" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch: # manual trigger
+
+jobs:
+  chceck:
+    name: Check Definitions
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+          python-version: "3.13"
+          cache: "pip" # caching pip dependencies
+
+    - name: Install dependencies
+      working-directory: ./definitions
+      run: pip install -r requirements.txt
+
+    - name: Run code generation
+      working-directory: ./definitions
+      run: python generate.py
+
+    - name: Check for changes
+      run: |
+        if [[ -n $(git status --porcelain) ]]; then
+            echo "Your protocol/definitions are out of sync with the generated files. Please run code generation and commit the changes." >> "$GITHUB_OUTPUT"; 
+        fi
