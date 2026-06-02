@@ -13,16 +13,21 @@ int EncodeStatusMessage(struct StatusMessage *m, unsigned char *s) {
     s[3] = (((unsigned char *)&((*m).time))[2] >> 5) & 7;
     s[3] |= (((unsigned char *)&((*m).time))[3] << 3) & 248;
     s[4] = (((unsigned char *)&((*m).time))[3] >> 5) & 7;
-    s[4] |= (((unsigned char *)&((*m).mode))[0] << 3) & 56;
-    s[4] |= (((unsigned char *)&((*m).motor_rpm))[0] << 6) & 192;
-    s[5] = (((unsigned char *)&((*m).motor_rpm))[0] >> 2) & 63;
-    s[5] |= (((unsigned char *)&((*m).motor_rpm))[1] << 6) & 192;
-    s[6] = (((unsigned char *)&((*m).motor_rpm))[1] >> 2) & 7;
-    s[6] |= (((unsigned char *)&((*m).target_rpm))[0] << 3) & 248;
-    s[7] = (((unsigned char *)&((*m).target_rpm))[0] >> 5) & 7;
-    s[7] |= (((unsigned char *)&((*m).target_rpm))[1] << 3) & 248;
-    s[8] = (((unsigned char *)&((*m).control_rpm))[0] ) & 255;
-    s[9] = (((unsigned char *)&((*m).control_rpm))[1] ) & 31;
+    s[4] |= (((unsigned char *)&((*m).connection_established))[0] << 3) & 8;
+    s[4] |= (((unsigned char *)&((*m).control_acknowledgement))[0] << 4) & 240;
+    s[5] = (((unsigned char *)&((*m).control_acknowledgement))[0] >> 4) & 15;
+    s[5] |= (((unsigned char *)&((*m).mode))[0] << 4) & 112;
+    s[5] |= (((unsigned char *)&((*m).motor_rpm))[0] << 7) & 128;
+    s[6] = (((unsigned char *)&((*m).motor_rpm))[0] >> 1) & 127;
+    s[6] |= (((unsigned char *)&((*m).motor_rpm))[1] << 7) & 128;
+    s[7] = (((unsigned char *)&((*m).motor_rpm))[1] >> 1) & 15;
+    s[7] |= (((unsigned char *)&((*m).target_rpm))[0] << 4) & 240;
+    s[8] = (((unsigned char *)&((*m).target_rpm))[0] >> 4) & 15;
+    s[8] |= (((unsigned char *)&((*m).target_rpm))[1] << 4) & 240;
+    s[9] = (((unsigned char *)&((*m).target_rpm))[1] >> 4) & 1;
+    s[9] |= (((unsigned char *)&((*m).control_rpm))[0] << 1) & 254;
+    s[10] = (((unsigned char *)&((*m).control_rpm))[0] >> 7) & 1;
+    s[10] |= (((unsigned char *)&((*m).control_rpm))[1] << 1) & 62;
     return 0;
 }
 
@@ -37,16 +42,21 @@ int DecodeStatusMessage(struct StatusMessage *m, unsigned char *s) {
     ((unsigned char *)&((*m).time))[2] |= (s[3] << 5) & 224;
     ((unsigned char *)&((*m).time))[3] = (s[3] >> 3) & 31;
     ((unsigned char *)&((*m).time))[3] |= (s[4] << 5) & 224;
-    ((unsigned char *)&((*m).mode))[0] = (s[4] >> 3) & 7;
-    ((unsigned char *)&((*m).motor_rpm))[0] = (s[4] >> 6) & 3;
-    ((unsigned char *)&((*m).motor_rpm))[0] |= (s[5] << 2) & 252;
-    ((unsigned char *)&((*m).motor_rpm))[1] = (s[5] >> 6) & 3;
-    ((unsigned char *)&((*m).motor_rpm))[1] |= (s[6] << 2) & 28;
-    ((unsigned char *)&((*m).target_rpm))[0] = (s[6] >> 3) & 31;
-    ((unsigned char *)&((*m).target_rpm))[0] |= (s[7] << 5) & 224;
-    ((unsigned char *)&((*m).target_rpm))[1] = (s[7] >> 3) & 31;
-    ((unsigned char *)&((*m).control_rpm))[0] = (s[8] ) & 255;
-    ((unsigned char *)&((*m).control_rpm))[1] = (s[9] ) & 31;
+    ((unsigned char *)&((*m).connection_established))[0] = (s[4] >> 3) & 1;
+    ((unsigned char *)&((*m).control_acknowledgement))[0] = (s[4] >> 4) & 15;
+    ((unsigned char *)&((*m).control_acknowledgement))[0] |= (s[5] << 4) & 240;
+    ((unsigned char *)&((*m).mode))[0] = (s[5] >> 4) & 7;
+    ((unsigned char *)&((*m).motor_rpm))[0] = (s[5] >> 7) & 1;
+    ((unsigned char *)&((*m).motor_rpm))[0] |= (s[6] << 1) & 254;
+    ((unsigned char *)&((*m).motor_rpm))[1] = (s[6] >> 7) & 1;
+    ((unsigned char *)&((*m).motor_rpm))[1] |= (s[7] << 1) & 30;
+    ((unsigned char *)&((*m).target_rpm))[0] = (s[7] >> 4) & 15;
+    ((unsigned char *)&((*m).target_rpm))[0] |= (s[8] << 4) & 240;
+    ((unsigned char *)&((*m).target_rpm))[1] = (s[8] >> 4) & 15;
+    ((unsigned char *)&((*m).target_rpm))[1] |= (s[9] << 4) & 16;
+    ((unsigned char *)&((*m).control_rpm))[0] = (s[9] >> 1) & 127;
+    ((unsigned char *)&((*m).control_rpm))[0] |= (s[10] << 7) & 128;
+    ((unsigned char *)&((*m).control_rpm))[1] = (s[10] >> 1) & 31;
     return 0;
 }
 
@@ -75,17 +85,43 @@ int DecodeErrorAppendixMessage(struct ErrorAppendixMessage *m, unsigned char *s)
 }
 
 int EncodeControlMessage(struct ControlMessage *m, unsigned char *s) {
-    s[0] = (((unsigned char *)&((*m).mode))[0] ) & 7;
-    s[0] |= (((unsigned char *)&((*m).target_rpm))[0] << 3) & 248;
-    s[1] = (((unsigned char *)&((*m).target_rpm))[0] >> 5) & 7;
-    s[1] |= (((unsigned char *)&((*m).target_rpm))[1] << 3) & 248;
+    s[0] = (((unsigned char *)&((*m).acknowledge))[0] ) & 255;
+    s[1] = (((unsigned char *)&((*m).mode))[0] ) & 7;
+    s[1] |= (((unsigned char *)&((*m).target_rpm))[0] << 3) & 248;
+    s[2] = (((unsigned char *)&((*m).target_rpm))[0] >> 5) & 7;
+    s[2] |= (((unsigned char *)&((*m).target_rpm))[1] << 3) & 248;
     return 0;
 }
 
 int DecodeControlMessage(struct ControlMessage *m, unsigned char *s) {
-    ((unsigned char *)&((*m).mode))[0] = (s[0] ) & 7;
-    ((unsigned char *)&((*m).target_rpm))[0] = (s[0] >> 3) & 31;
-    ((unsigned char *)&((*m).target_rpm))[0] |= (s[1] << 5) & 224;
-    ((unsigned char *)&((*m).target_rpm))[1] = (s[1] >> 3) & 31;
+    ((unsigned char *)&((*m).acknowledge))[0] = (s[0] ) & 255;
+    ((unsigned char *)&((*m).mode))[0] = (s[1] ) & 7;
+    ((unsigned char *)&((*m).target_rpm))[0] = (s[1] >> 3) & 31;
+    ((unsigned char *)&((*m).target_rpm))[0] |= (s[2] << 5) & 224;
+    ((unsigned char *)&((*m).target_rpm))[1] = (s[2] >> 3) & 31;
+    return 0;
+}
+
+int EncodeConnectAppendixMessage(struct ConnectAppendixMessage *m, unsigned char *s) {
+    s[0] = (((unsigned char *)&((*m).acknowledge))[0] ) & 255;
+    s[1] = (((unsigned char *)&((*m).protocol_version))[0] ) & 255;
+    s[2] = (((unsigned char *)&((*m).protocol_version))[1] ) & 255;
+    return 0;
+}
+
+int DecodeConnectAppendixMessage(struct ConnectAppendixMessage *m, unsigned char *s) {
+    ((unsigned char *)&((*m).acknowledge))[0] = (s[0] ) & 255;
+    ((unsigned char *)&((*m).protocol_version))[0] = (s[1] ) & 255;
+    ((unsigned char *)&((*m).protocol_version))[1] = (s[2] ) & 255;
+    return 0;
+}
+
+int EncodeConfigurationAppendixMessage(struct ConfigurationAppendixMessage *m, unsigned char *s) {
+    s[0] = (((unsigned char *)&((*m).acknowledge))[0] ) & 255;
+    return 0;
+}
+
+int DecodeConfigurationAppendixMessage(struct ConfigurationAppendixMessage *m, unsigned char *s) {
+    ((unsigned char *)&((*m).acknowledge))[0] = (s[0] ) & 255;
     return 0;
 }

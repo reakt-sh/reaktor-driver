@@ -1,10 +1,18 @@
 _doc_: "Configuration parameters for the communication between driver and connector"
 
 # Communication:
+comm_protocol_version:
+  value: 1
+  c_type: uint8_t
+  comment: "Version number of the communication protocol."
 comm_serial_baudrate:
   value: 115200
   c_type: uint32_t
   comment: "Serial communication speed."
+comm_message_acknowledgement_code_bitsize: # Must match the size in communication.bitproto
+  value: 8
+  c_type: unsigned int
+  comment: "Number of bits used to encode the acknowledgement code in status and control messages."
 comm_status_message_time_bitsize: # Must match the size in communication.bitproto
   value: 32
   c_type: unsigned int
@@ -17,3 +25,7 @@ comm_control_message_heartbeat_time:
   value: 1000
   c_type: unsigned int
   comment: "When in remote control mode, the maximum time in ms between two control messages before the driver stops the motor for safety reasons."
+comm_control_message_acknowledgement_time:
+  value: 1000
+  c_type: unsigned int
+  comment: "Maximum time in ms between a sent control message and its acknowledgement by a status message (w.r.t. acknowledgement code)."

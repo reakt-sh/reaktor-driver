@@ -16,10 +16,13 @@ class Mode(IntEnum): # 3bit
     DRIVE_MODE_REVERSE = 2
     DRIVE_MODE_PARKING = 3
     DRIVE_MODE_EMERGENCY_STOP = 4
-# In a heartbeat message, the driver will ignore remaining payload (just a keep-alive message)
+# // Special control modes only used by ControlMessages
+# Used as a keep-alive message. The driver will ignore remaining payload.
     HEARTBEAT = 5
-    UNUSED_B = 6
-    UNUSED_C = 7
+# Used to initiate a connection handshake. The next message received by the driver must be a ConnectAppendixMessage.
+    CONNECT = 6
+# Used to initiate a reconfiguation of the driver. The next message received by the driver must be a ConfigurationAppendixMessage.
+    CONFIG = 7
 
 
 # Aliases for backwards compatibility
@@ -28,10 +31,13 @@ DRIVE_MODE_FORWARD: Mode = Mode.DRIVE_MODE_FORWARD
 DRIVE_MODE_REVERSE: Mode = Mode.DRIVE_MODE_REVERSE
 DRIVE_MODE_PARKING: Mode = Mode.DRIVE_MODE_PARKING
 DRIVE_MODE_EMERGENCY_STOP: Mode = Mode.DRIVE_MODE_EMERGENCY_STOP
-# In a heartbeat message, the driver will ignore remaining payload (just a keep-alive message)
+# // Special control modes only used by ControlMessages
+# Used as a keep-alive message. The driver will ignore remaining payload.
 HEARTBEAT: Mode = Mode.HEARTBEAT
-UNUSED_B: Mode = Mode.UNUSED_B
-UNUSED_C: Mode = Mode.UNUSED_C
+# Used to initiate a connection handshake. The next message received by the driver must be a ConnectAppendixMessage.
+CONNECT: Mode = Mode.CONNECT
+# Used to initiate a reconfiguation of the driver. The next message received by the driver must be a ConfigurationAppendixMessage.
+CONFIG: Mode = Mode.CONFIG
 
 
 _MODE_VALUE_TO_NAME_MAP: Dict[Mode, str] = {
@@ -41,8 +47,8 @@ _MODE_VALUE_TO_NAME_MAP: Dict[Mode, str] = {
     Mode.DRIVE_MODE_PARKING: "DRIVE_MODE_PARKING",
     Mode.DRIVE_MODE_EMERGENCY_STOP: "DRIVE_MODE_EMERGENCY_STOP",
     Mode.HEARTBEAT: "HEARTBEAT",
-    Mode.UNUSED_B: "UNUSED_B",
-    Mode.UNUSED_C: "UNUSED_C",
+    Mode.CONNECT: "CONNECT",
+    Mode.CONFIG: "CONFIG",
 }
 
 def bp_processor_Mode() -> bp.Processor:
@@ -75,7 +81,7 @@ def bp_processor_ErrorState() -> bp.Processor:
 @dataclass
 class StatusMessage(bp.MessageBase):
     # Number of bytes to serialize class StatusMessage
-    BYTES_LENGTH: ClassVar[int] = 10
+    BYTES_LENGTH: ClassVar[int] = 11
 
     # // System state
     # If an error occurred an error appendix message will follow directly after this message!
@@ -83,8 +89,12 @@ class StatusMessage(bp.MessageBase):
     # This field is a proxy to hold integer value of enum field 'error'
     _enum_field_proxy__error: int = field(init=False, repr=False) # 2bit
     remote_control: bool = False # 1bit
-    # Time since system start in ms. Receiving end must handle overflows
+    # Time since system start in ms. Receiving end must handle overflows!
     time: int = 0 # 32bit
+    # // Communication state
+    connection_established: bool = False # 1bit
+    # Acknowledge value of the last received control message. Sent only once, zero afterwards until next control message.
+    control_acknowledgement: int = 0 # 8bit
     # // Motor control state
     mode: Union[int, Mode] = Mode.DRIVE_MODE_NEUTRAL
     # This field is a proxy to hold integer value of enum field 'mode'
@@ -128,12 +138,14 @@ class StatusMessage(bp.MessageBase):
             bp.MessageFieldProcessor(1, bp_processor_ErrorState()),
             bp.MessageFieldProcessor(2, bp.Bool()),
             bp.MessageFieldProcessor(3, bp.Uint(32)),
-            bp.MessageFieldProcessor(10, bp_processor_Mode()),
-            bp.MessageFieldProcessor(11, bp.Uint(13)),
-            bp.MessageFieldProcessor(12, bp.Uint(13)),
+            bp.MessageFieldProcessor(10, bp.Bool()),
+            bp.MessageFieldProcessor(11, bp.Uint(8)),
+            bp.MessageFieldProcessor(20, bp_processor_Mode()),
             bp.MessageFieldProcessor(21, bp.Uint(13)),
+            bp.MessageFieldProcessor(22, bp.Uint(13)),
+            bp.MessageFieldProcessor(31, bp.Uint(13)),
         ]
-        return bp.MessageProcessor(False, 77, field_processors)
+        return bp.MessageProcessor(False, 86, field_processors)
 
     def bp_set_byte(self, di: bp.DataIndexer, lshift: int, b: bp.byte) -> None:
         if di.field_number == 1:
@@ -143,12 +155,16 @@ class StatusMessage(bp.MessageBase):
         if di.field_number == 3:
             self.time |= (int(b) << lshift)
         if di.field_number == 10:
-            self.mode |= (Mode(b) << lshift)
+            self.connection_established = bool(b)
         if di.field_number == 11:
-            self.motor_rpm |= (int(b) << lshift)
-        if di.field_number == 12:
-            self.target_rpm |= (int(b) << lshift)
+            self.control_acknowledgement |= (int(b) << lshift)
+        if di.field_number == 20:
+            self.mode |= (Mode(b) << lshift)
         if di.field_number == 21:
+            self.motor_rpm |= (int(b) << lshift)
+        if di.field_number == 22:
+            self.target_rpm |= (int(b) << lshift)
+        if di.field_number == 31:
             self.control_rpm |= (int(b) << lshift)
         return
 
@@ -160,12 +176,16 @@ class StatusMessage(bp.MessageBase):
         if di.field_number == 3:
             return (self.time >> rshift) & 255
         if di.field_number == 10:
-            return (self.mode >> rshift) & 255
+            return (int(self.connection_established) >> rshift) & 255
         if di.field_number == 11:
-            return (self.motor_rpm >> rshift) & 255
-        if di.field_number == 12:
-            return (self.target_rpm >> rshift) & 255
+            return (self.control_acknowledgement >> rshift) & 255
+        if di.field_number == 20:
+            return (self.mode >> rshift) & 255
         if di.field_number == 21:
+            return (self.motor_rpm >> rshift) & 255
+        if di.field_number == 22:
+            return (self.target_rpm >> rshift) & 255
+        if di.field_number == 31:
             return (self.control_rpm >> rshift) & 255
         return bp.byte(0)  # Won't reached
 
@@ -252,8 +272,10 @@ class ErrorAppendixMessage(bp.MessageBase):
 @dataclass
 class ControlMessage(bp.MessageBase):
     # Number of bytes to serialize class ControlMessage
-    BYTES_LENGTH: ClassVar[int] = 2
+    BYTES_LENGTH: ClassVar[int] = 3
 
+    # Acknowledge value that should be returned in the StatusMessage. Must be non-zero.
+    acknowledge: int = 0 # 8bit
     mode: Union[int, Mode] = Mode.DRIVE_MODE_NEUTRAL
     # This field is a proxy to hold integer value of enum field 'mode'
     _enum_field_proxy__mode: int = field(init=False, repr=False) # 3bit
@@ -279,23 +301,146 @@ class ControlMessage(bp.MessageBase):
 
     def bp_processor(self) -> bp.Processor:
         field_processors: List[bp.Processor] = [
-            bp.MessageFieldProcessor(1, bp_processor_Mode()),
-            bp.MessageFieldProcessor(2, bp.Uint(13)),
+            bp.MessageFieldProcessor(1, bp.Uint(8)),
+            bp.MessageFieldProcessor(10, bp_processor_Mode()),
+            bp.MessageFieldProcessor(11, bp.Uint(13)),
         ]
-        return bp.MessageProcessor(False, 16, field_processors)
+        return bp.MessageProcessor(False, 24, field_processors)
 
     def bp_set_byte(self, di: bp.DataIndexer, lshift: int, b: bp.byte) -> None:
         if di.field_number == 1:
+            self.acknowledge |= (int(b) << lshift)
+        if di.field_number == 10:
             self.mode |= (Mode(b) << lshift)
-        if di.field_number == 2:
+        if di.field_number == 11:
             self.target_rpm |= (int(b) << lshift)
         return
 
     def bp_get_byte(self, di: bp.DataIndexer, rshift: int) -> bp.byte:
         if di.field_number == 1:
+            return (self.acknowledge >> rshift) & 255
+        if di.field_number == 10:
             return (self.mode >> rshift) & 255
-        if di.field_number == 2:
+        if di.field_number == 11:
             return (self.target_rpm >> rshift) & 255
+        return bp.byte(0)  # Won't reached
+
+    def bp_get_accessor(self, di: bp.DataIndexer) -> bp.Accessor:
+        return bp.NilAccessor() # Won't reached
+
+    def encode(self) -> bytearray:
+        """
+        Encode this object to bytearray.
+        """
+        s = bytearray(self.BYTES_LENGTH)
+        ctx = bp.ProcessContext(True, s)
+        self.bp_processor().process(ctx, bp.NIL_DATA_INDEXER, self)
+        return ctx.s
+
+    def decode(self, s: bytearray) -> None:
+        """
+        Decode given bytearray s to this object.
+        :param s: A bytearray with length at least `BYTES_LENGTH`.
+        """
+        assert len(s) >= self.BYTES_LENGTH, bp.NotEnoughBytes()
+        ctx = bp.ProcessContext(False, s)
+        self.bp_processor().process(ctx, bp.NIL_DATA_INDEXER, self)
+
+    def bp_process_int(self, di: bp.DataIndexer) -> None:
+        return
+
+
+@dataclass
+class ConnectAppendixMessage(bp.MessageBase):
+    # Number of bytes to serialize class ConnectAppendixMessage
+    BYTES_LENGTH: ClassVar[int] = 3
+
+    # Acknowledge value that should be returned in the StatusMessage. Must be non-zero.
+    acknowledge: int = 0 # 8bit
+    protocol_version: int = 0 # 16bit
+
+    def __post_init__(self):
+        pass
+
+    @staticmethod
+    def dict_factory(kv_pairs):
+        return {k: v for k, v in kv_pairs if not k.startswith('_enum_field_proxy__')}
+
+    def bp_processor(self) -> bp.Processor:
+        field_processors: List[bp.Processor] = [
+            bp.MessageFieldProcessor(1, bp.Uint(8)),
+            bp.MessageFieldProcessor(10, bp.Uint(16)),
+        ]
+        return bp.MessageProcessor(False, 24, field_processors)
+
+    def bp_set_byte(self, di: bp.DataIndexer, lshift: int, b: bp.byte) -> None:
+        if di.field_number == 1:
+            self.acknowledge |= (int(b) << lshift)
+        if di.field_number == 10:
+            self.protocol_version |= (int(b) << lshift)
+        return
+
+    def bp_get_byte(self, di: bp.DataIndexer, rshift: int) -> bp.byte:
+        if di.field_number == 1:
+            return (self.acknowledge >> rshift) & 255
+        if di.field_number == 10:
+            return (self.protocol_version >> rshift) & 255
+        return bp.byte(0)  # Won't reached
+
+    def bp_get_accessor(self, di: bp.DataIndexer) -> bp.Accessor:
+        return bp.NilAccessor() # Won't reached
+
+    def encode(self) -> bytearray:
+        """
+        Encode this object to bytearray.
+        """
+        s = bytearray(self.BYTES_LENGTH)
+        ctx = bp.ProcessContext(True, s)
+        self.bp_processor().process(ctx, bp.NIL_DATA_INDEXER, self)
+        return ctx.s
+
+    def decode(self, s: bytearray) -> None:
+        """
+        Decode given bytearray s to this object.
+        :param s: A bytearray with length at least `BYTES_LENGTH`.
+        """
+        assert len(s) >= self.BYTES_LENGTH, bp.NotEnoughBytes()
+        ctx = bp.ProcessContext(False, s)
+        self.bp_processor().process(ctx, bp.NIL_DATA_INDEXER, self)
+
+    def bp_process_int(self, di: bp.DataIndexer) -> None:
+        return
+
+
+@dataclass
+class ConfigurationAppendixMessage(bp.MessageBase):
+    # Number of bytes to serialize class ConfigurationAppendixMessage
+    BYTES_LENGTH: ClassVar[int] = 1
+
+    # Acknowledge value that should be returned in the StatusMessage. Must be non-zero.
+    acknowledge: int = 0 # 8bit
+
+    def __post_init__(self):
+        pass
+
+    @staticmethod
+    def dict_factory(kv_pairs):
+        return {k: v for k, v in kv_pairs if not k.startswith('_enum_field_proxy__')}
+
+    def bp_processor(self) -> bp.Processor:
+        field_processors: List[bp.Processor] = [
+            bp.MessageFieldProcessor(1, bp.Uint(8)),
+        ]
+        return bp.MessageProcessor(False, 8, field_processors)
+
+    def bp_set_byte(self, di: bp.DataIndexer, lshift: int, b: bp.byte) -> None:
+        if di.field_number == 1:
+            self.acknowledge |= (int(b) << lshift)
+        return
+
+    def bp_get_byte(self, di: bp.DataIndexer, rshift: int) -> bp.byte:
+        if di.field_number == 1:
+            return (self.acknowledge >> rshift) & 255
         return bp.byte(0)  # Won't reached
 
     def bp_get_accessor(self, di: bp.DataIndexer) -> bp.Accessor:

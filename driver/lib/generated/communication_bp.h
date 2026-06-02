@@ -23,10 +23,13 @@ typedef uint8_t Mode; // 3bit
 #define DRIVE_MODE_REVERSE 2
 #define DRIVE_MODE_PARKING 3
 #define DRIVE_MODE_EMERGENCY_STOP 4
-// In a heartbeat message, the driver will ignore remaining payload (just a keep-alive message)
+// // Special control modes only used by ControlMessages
+// Used as a keep-alive message. The driver will ignore remaining payload.
 #define HEARTBEAT 5
-#define UNUSED_B 6
-#define UNUSED_C 7
+// Used to initiate a connection handshake. The next message received by the driver must be a ConnectAppendixMessage.
+#define CONNECT 6
+// Used to initiate a reconfiguation of the driver. The next message received by the driver must be a ConfigurationAppendixMessage.
+#define CONFIG 7
 
 typedef uint8_t ErrorState; // 2bit
 
@@ -35,15 +38,19 @@ typedef uint8_t ErrorState; // 2bit
 #define FATAL_ERROR 3
 
 // Number of bytes to encode struct StatusMessage
-#define BYTES_LENGTH_STATUS_MESSAGE 10
+#define BYTES_LENGTH_STATUS_MESSAGE 11
 
 struct StatusMessage {
     // // System state
     // If an error occurred an error appendix message will follow directly after this message!
     ErrorState error; // 2bit
     bool remote_control; // 1bit
-    // Time since system start in ms. Receiving end must handle overflows
+    // Time since system start in ms. Receiving end must handle overflows!
     uint32_t time; // 32bit
+    // // Communication state
+    bool connection_established; // 1bit
+    // Acknowledge value of the last received control message. Sent only once, zero afterwards until next control message.
+    uint8_t control_acknowledgement; // 8bit
     // // Motor control state
     Mode mode; // 3bit
     uint16_t motor_rpm; // 13bit
@@ -60,11 +67,30 @@ struct ErrorAppendixMessage {
 };
 
 // Number of bytes to encode struct ControlMessage
-#define BYTES_LENGTH_CONTROL_MESSAGE 2
+#define BYTES_LENGTH_CONTROL_MESSAGE 3
 
 struct ControlMessage {
+    // Acknowledge value that should be returned in the StatusMessage. Must be non-zero.
+    uint8_t acknowledge; // 8bit
     Mode mode; // 3bit
     uint16_t target_rpm; // 13bit
+};
+
+// Number of bytes to encode struct ConnectAppendixMessage
+#define BYTES_LENGTH_CONNECT_APPENDIX_MESSAGE 3
+
+struct ConnectAppendixMessage {
+    // Acknowledge value that should be returned in the StatusMessage. Must be non-zero.
+    uint8_t acknowledge; // 8bit
+    uint16_t protocol_version; // 16bit
+};
+
+// Number of bytes to encode struct ConfigurationAppendixMessage
+#define BYTES_LENGTH_CONFIGURATION_APPENDIX_MESSAGE 1
+
+struct ConfigurationAppendixMessage {
+    // Acknowledge value that should be returned in the StatusMessage. Must be non-zero.
+    uint8_t acknowledge; // 8bit
 };
 
 // Encode struct StatusMessage to given buffer s.
@@ -81,6 +107,16 @@ int DecodeErrorAppendixMessage(struct ErrorAppendixMessage *m, unsigned char *s)
 int EncodeControlMessage(struct ControlMessage *m, unsigned char *s);
 // Decode struct ControlMessage from given buffer s.
 int DecodeControlMessage(struct ControlMessage *m, unsigned char *s);
+
+// Encode struct ConnectAppendixMessage to given buffer s.
+int EncodeConnectAppendixMessage(struct ConnectAppendixMessage *m, unsigned char *s);
+// Decode struct ConnectAppendixMessage from given buffer s.
+int DecodeConnectAppendixMessage(struct ConnectAppendixMessage *m, unsigned char *s);
+
+// Encode struct ConfigurationAppendixMessage to given buffer s.
+int EncodeConfigurationAppendixMessage(struct ConfigurationAppendixMessage *m, unsigned char *s);
+// Decode struct ConfigurationAppendixMessage from given buffer s.
+int DecodeConfigurationAppendixMessage(struct ConfigurationAppendixMessage *m, unsigned char *s);
 
 #if defined(__cplusplus)
 }

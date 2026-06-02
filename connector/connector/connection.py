@@ -79,7 +79,7 @@ class Connection:
         _, protocol = await create_serial_connection(asyncio.get_event_loop(), SerialConnectionHandler, port, baudrate=COMM_SERIAL_BAUDRATE)
         self._serial = protocol
         self._decoder = MessageHandler(protocol, self._handle_status)
-        # Wait until the connection is fully established (ping-pong complete)
+        # Wait until the connection is fully established (driver indicates connected)
         await self._decoder.start_processing()
         self._opened = True
         logger.info("Communication established on port %s", port)
