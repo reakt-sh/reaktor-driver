@@ -1,0 +1,33 @@
+name: Connector Linting
+
+on:
+  push:
+    branches: [ "*" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch: # manual trigger
+
+jobs:
+  lint:
+    name: Linting
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+          python-version: "3.13"
+          cache: "pip" # caching pip dependencies
+
+    - name: Install dependencies
+      working-directory: ./connector
+      run: pip install -r requirements.txt
+
+    - name: Install linter
+      run: pip install pylint
+
+    - name: Lint with Pylint
+      working-directory: ./connector
+      run: pylint --rcfile=./pylintrc.toml -j 0 --output-format=github **/*.py
