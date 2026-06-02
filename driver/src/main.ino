@@ -64,7 +64,7 @@ void loop(void) {
             }
         }
 
-        // Handle remote control input (even if ignored, ensures freeing comm buffer)
+        // Handle communication and update control command if new command received
         bool newControl = handleCommunication(remoteControlEnabled, &remoteControl);
         if (remoteControlEnabled) {
             if (newControl) {

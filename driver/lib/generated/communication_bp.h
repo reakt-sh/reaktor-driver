@@ -38,9 +38,13 @@ typedef uint8_t ErrorState; // 2bit
 #define FATAL_ERROR 3
 
 // Number of bytes to encode struct StatusMessage
-#define BYTES_LENGTH_STATUS_MESSAGE 11
+#define BYTES_LENGTH_STATUS_MESSAGE 12
 
 struct StatusMessage {
+    // // Header
+    // Protocol version. Must be checked by the receiving end to ensure decoding compatibility.
+    // Is the first field in every protocol version to ensure mismatch detection.
+    uint8_t protocol_version; // 8bit
     // // System state
     // If an error occurred an error appendix message will follow directly after this message!
     ErrorState error; // 2bit

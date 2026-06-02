@@ -51,6 +51,9 @@ class MessageHandler:
                 except Exception as e:
                     logger.error("Failed to decode status message: %s", e)
                     continue
+                # Check protocol version
+                if status_msg.protocol_version != COMM_PROTOCOL_VERSION:
+                    logger.error("Protocol version mismatch. Expected: %d, Received: %d. Connection to driver will fail.", COMM_PROTOCOL_VERSION, status_msg.protocol_version)
                 # Read error appendix if needed
                 status_errors = []
                 if status_msg.error != ErrorState.NO_ERROR:
@@ -82,8 +85,13 @@ class MessageHandler:
                             notifier.set_result(True)
                             notified = True
                     elif status_msg.control_acknowledgement == connect_pending_ack:
-                        logger.error("Connection handshake with driver failed, resending request.")
-                        connect_pending_ack = self._send_connection_request()
+                        # Connection request acknowledged but connection was rejected
+                        if status_msg.protocol_version == COMM_PROTOCOL_VERSION:
+                            logger.error("Connection handshake with driver failed, resending request.")
+                            connect_pending_ack = self._send_connection_request()
+                        else:
+                            logger.error("Connection handshake with driver failed due to protocol version mismatch. Stopping connection attempts.")
+                            connect_pending_ack = -1
                 elif not status_msg.connection_established:
                     if notified:
                         logger.warning("Driver indicated lost connection, attempting to re-establish.")

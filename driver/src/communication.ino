@@ -29,6 +29,7 @@ enum class ExpectedMessage {
 
 // Current status
 struct StatusMessage status = {
+    .protocol_version = COMM_PROTOCOL_VERSION,
     .error = NO_ERROR,
     .remote_control = false,
     .time = 0,

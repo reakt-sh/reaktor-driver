@@ -17,7 +17,7 @@ ERROR_CONTROL_MODE_SWITCH_UNSAFE_MESSAGE = "Control mode switch attempted while 
 
 # Mapping of error codes to human-readable messages.
 ERROR_MAP = {
-    0: "Connection refused due to protocol version mismatch between driver and remote control.",
+    0: "Connection refuesed due to protocol version mismatch between driver and remote control.",
     1: "A control message was received without a successful connection handshake beforehand.",
     2: "While in active remote control mode, no control (or heartbeat) message was received in the expected interval.",
     3: "No connection to motor throttle control component (DAC via I2C).",

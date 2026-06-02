@@ -81,8 +81,12 @@ def bp_processor_ErrorState() -> bp.Processor:
 @dataclass
 class StatusMessage(bp.MessageBase):
     # Number of bytes to serialize class StatusMessage
-    BYTES_LENGTH: ClassVar[int] = 11
+    BYTES_LENGTH: ClassVar[int] = 12
 
+    # // Header
+    # Protocol version. Must be checked by the receiving end to ensure decoding compatibility.
+    # Is the first field in every protocol version to ensure mismatch detection.
+    protocol_version: int = 0 # 8bit
     # // System state
     # If an error occurred an error appendix message will follow directly after this message!
     error: Union[int, ErrorState] = ErrorState.NO_ERROR
@@ -135,57 +139,62 @@ class StatusMessage(bp.MessageBase):
 
     def bp_processor(self) -> bp.Processor:
         field_processors: List[bp.Processor] = [
-            bp.MessageFieldProcessor(1, bp_processor_ErrorState()),
-            bp.MessageFieldProcessor(2, bp.Bool()),
-            bp.MessageFieldProcessor(3, bp.Uint(32)),
-            bp.MessageFieldProcessor(10, bp.Bool()),
-            bp.MessageFieldProcessor(11, bp.Uint(8)),
-            bp.MessageFieldProcessor(20, bp_processor_Mode()),
-            bp.MessageFieldProcessor(21, bp.Uint(13)),
-            bp.MessageFieldProcessor(22, bp.Uint(13)),
+            bp.MessageFieldProcessor(1, bp.Uint(8)),
+            bp.MessageFieldProcessor(11, bp_processor_ErrorState()),
+            bp.MessageFieldProcessor(12, bp.Bool()),
+            bp.MessageFieldProcessor(13, bp.Uint(32)),
+            bp.MessageFieldProcessor(20, bp.Bool()),
+            bp.MessageFieldProcessor(21, bp.Uint(8)),
+            bp.MessageFieldProcessor(30, bp_processor_Mode()),
             bp.MessageFieldProcessor(31, bp.Uint(13)),
+            bp.MessageFieldProcessor(32, bp.Uint(13)),
+            bp.MessageFieldProcessor(40, bp.Uint(13)),
         ]
-        return bp.MessageProcessor(False, 86, field_processors)
+        return bp.MessageProcessor(False, 94, field_processors)
 
     def bp_set_byte(self, di: bp.DataIndexer, lshift: int, b: bp.byte) -> None:
         if di.field_number == 1:
-            self.error |= (ErrorState(b) << lshift)
-        if di.field_number == 2:
-            self.remote_control = bool(b)
-        if di.field_number == 3:
-            self.time |= (int(b) << lshift)
-        if di.field_number == 10:
-            self.connection_established = bool(b)
+            self.protocol_version |= (int(b) << lshift)
         if di.field_number == 11:
-            self.control_acknowledgement |= (int(b) << lshift)
+            self.error |= (ErrorState(b) << lshift)
+        if di.field_number == 12:
+            self.remote_control = bool(b)
+        if di.field_number == 13:
+            self.time |= (int(b) << lshift)
         if di.field_number == 20:
-            self.mode |= (Mode(b) << lshift)
+            self.connection_established = bool(b)
         if di.field_number == 21:
-            self.motor_rpm |= (int(b) << lshift)
-        if di.field_number == 22:
-            self.target_rpm |= (int(b) << lshift)
+            self.control_acknowledgement |= (int(b) << lshift)
+        if di.field_number == 30:
+            self.mode |= (Mode(b) << lshift)
         if di.field_number == 31:
+            self.motor_rpm |= (int(b) << lshift)
+        if di.field_number == 32:
+            self.target_rpm |= (int(b) << lshift)
+        if di.field_number == 40:
             self.control_rpm |= (int(b) << lshift)
         return
 
     def bp_get_byte(self, di: bp.DataIndexer, rshift: int) -> bp.byte:
         if di.field_number == 1:
-            return (self.error >> rshift) & 255
-        if di.field_number == 2:
-            return (int(self.remote_control) >> rshift) & 255
-        if di.field_number == 3:
-            return (self.time >> rshift) & 255
-        if di.field_number == 10:
-            return (int(self.connection_established) >> rshift) & 255
+            return (self.protocol_version >> rshift) & 255
         if di.field_number == 11:
-            return (self.control_acknowledgement >> rshift) & 255
+            return (self.error >> rshift) & 255
+        if di.field_number == 12:
+            return (int(self.remote_control) >> rshift) & 255
+        if di.field_number == 13:
+            return (self.time >> rshift) & 255
         if di.field_number == 20:
-            return (self.mode >> rshift) & 255
+            return (int(self.connection_established) >> rshift) & 255
         if di.field_number == 21:
-            return (self.motor_rpm >> rshift) & 255
-        if di.field_number == 22:
-            return (self.target_rpm >> rshift) & 255
+            return (self.control_acknowledgement >> rshift) & 255
+        if di.field_number == 30:
+            return (self.mode >> rshift) & 255
         if di.field_number == 31:
+            return (self.motor_rpm >> rshift) & 255
+        if di.field_number == 32:
+            return (self.target_rpm >> rshift) & 255
+        if di.field_number == 40:
             return (self.control_rpm >> rshift) & 255
         return bp.byte(0)  # Won't reached
 

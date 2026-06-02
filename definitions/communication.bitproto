@@ -27,25 +27,30 @@ enum ErrorState : uint2 {
 }
 
 message StatusMessage {
+    //// Header
+    // Protocol version. Must be checked by the receiving end to ensure decoding compatibility.
+    // Is the first field in every protocol version to ensure mismatch detection.
+    uint8 protocol_version = 1;
+
     //// System state
     // If an error occurred an error appendix message will follow directly after this message!
-    ErrorState error = 1;
-    bool remote_control = 2;
+    ErrorState error = 11;
+    bool remote_control = 12;
     // Time since system start in ms. Receiving end must handle overflows!
-    uint32 time = 3;
+    uint32 time = 13;
 
     //// Communication state
-    bool connection_established = 10;
+    bool connection_established = 20;
     // Acknowledge value of the last received control message. Sent only once, zero afterwards until next control message.
-    uint8 control_acknowledgement = 11;
+    uint8 control_acknowledgement = 21;
 
     //// Motor control state
-    Mode mode = 20;
-    uint13 motor_rpm = 21;
-    uint13 target_rpm = 22;
+    Mode mode = 30;
+    uint13 motor_rpm = 31;
+    uint13 target_rpm = 32;
 
     //// Internal state
-    uint13 control_rpm = 31;
+    uint13 control_rpm = 40;
 }
 
 message ErrorAppendixMessage {
