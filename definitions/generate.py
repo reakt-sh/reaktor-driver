@@ -47,7 +47,7 @@ def generate():
     for file_name in def_files:
         print(" -", file_name)
         # Read yaml
-        with open(file_name, encoding="utf-8") as file:
+        with open(join(DEF_DIR, file_name), encoding="utf-8") as file:
             data = yaml.load(file, Loader=yaml.SafeLoader)
             # Validate
             validate(instance=data, schema=schema)

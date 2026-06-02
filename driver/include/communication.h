@@ -20,13 +20,13 @@ typedef struct ControlCommand tControlCommand;
 bool setupCommunication();
 
 /**
- * Handle incoming remote control command.
+ * Handle communication and incoming remote control command.
  *
  * @param ignore if true, the message will be discarded and not processed
  * @param control pointer to store the decoded control command
  * @return true if a valid control input was received and decoded
  */
-bool checkRemoteControl(bool ignore, tControlCommand* control);
+bool handleCommunication(bool ignore, tControlCommand* control);
 
 /**
  * Handle sending status report message.

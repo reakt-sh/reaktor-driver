@@ -43,9 +43,12 @@ tControlCommand remoteControl;
 
 void loop(void) {
     if (hasFatalError()) {
-        // In case of fatal error, just report status
+        // In case of fatal error keep in save state
         triggerEmergencyStop();
+        // Handle basic communication to allow error reporting
+        handleCommunication(false, &remoteControl);
         sendStatusReport(true);
+        // Wait regular response time
         delay(COMM_STATUS_MESSAGE_SPACING_TIME);
     } else {
         // Normal operation
@@ -62,7 +65,7 @@ void loop(void) {
         }
 
         // Handle remote control input (even if ignored, ensures freeing comm buffer)
-        bool newControl = checkRemoteControl(remoteControlEnabled, &remoteControl);
+        bool newControl = handleCommunication(remoteControlEnabled, &remoteControl);
         if (remoteControlEnabled) {
             if (newControl) {
                 setNextMode(remoteControl.mode);
