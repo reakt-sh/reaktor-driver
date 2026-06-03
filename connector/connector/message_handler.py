@@ -9,7 +9,7 @@ from typing import Callable
 from math import floor
 from .data import Control, InternalState, Status
 from .serial_connection_handler import SerialConnectionHandler
-from .generated.communication_bp import StatusMessage, ControlMessage, ConnectAppendixMessage, ErrorAppendixMessage, ErrorState, Mode
+from .generated.communication_bp import StatusMessage, ControlMessage, ErrorAppendixMessage, ErrorState, Mode
 from .generated.config_communication import COMM_STATUS_MESSAGE_TIME_BITSIZE, COMM_PROTOCOL_VERSION, COMM_MESSAGE_ACKNOWLEDGEMENT_CODE_BITSIZE, COMM_CONTROL_MESSAGE_ACKNOWLEDGEMENT_TIME
 from .generated.config_vehicle import MOTOR_SPEED_TRANSMISSION_FACTOR
 from .generated.errors import ERROR_MAP
@@ -157,17 +157,12 @@ class MessageHandler:
         ack_code = self._get_next_acknowledgement_code()
         # Control message for connection request
         msg = ControlMessage(
+            protocol_version=COMM_PROTOCOL_VERSION,
             mode=Mode.CONNECT,
             target_rpm=0,
             acknowledge=ack_code
         )
         logger.info("Sending connection control message: %s", msg.to_dict())
-        self._serial.send(msg.encode())
-        # Connection appendix message
-        msg_appendix = ConnectAppendixMessage(
-            protocol_version=COMM_PROTOCOL_VERSION
-        )
-        logger.info("Sending connection appendix message: %s", msg_appendix.to_dict())
         self._serial.send(msg.encode())
 
         return ack_code
@@ -179,6 +174,7 @@ class MessageHandler:
             return False
         rpm = floor(control.target_speed / MOTOR_SPEED_TRANSMISSION_FACTOR)
         msg = ControlMessage(
+            protocol_version=COMM_PROTOCOL_VERSION,
             mode=control.mode,
             target_rpm=rpm
         )
@@ -192,6 +188,7 @@ class MessageHandler:
             logger.error("Cannot send heartbeat message: serial connection not yet ready")
             return False
         msg = ControlMessage(
+            protocol_version=COMM_PROTOCOL_VERSION,
             mode=Mode.HEARTBEAT,
             target_rpm=0
         )

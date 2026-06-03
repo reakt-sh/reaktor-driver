@@ -43,18 +43,18 @@ typedef uint8_t ErrorState; // 2bit
 struct StatusMessage {
     // // Header
     // Protocol version. Must be checked by the receiving end to ensure decoding compatibility.
-    // Is the first field in every protocol version to ensure mismatch detection.
+    // Must be the first field to ensure mismatch detection even if other fields are corrupted due to protocol changes.
     uint8_t protocol_version; // 8bit
+    // // Communication state
+    // Acknowledge value of the last received control message. Sent only once, zero afterwards until next control message.
+    uint8_t control_acknowledgement; // 8bit
+    bool connection_established; // 1bit
     // // System state
     // If an error occurred an error appendix message will follow directly after this message!
     ErrorState error; // 2bit
     bool remote_control; // 1bit
     // Time since system start in ms. Receiving end must handle overflows!
     uint32_t time; // 32bit
-    // // Communication state
-    bool connection_established; // 1bit
-    // Acknowledge value of the last received control message. Sent only once, zero afterwards until next control message.
-    uint8_t control_acknowledgement; // 8bit
     // // Motor control state
     Mode mode; // 3bit
     uint16_t motor_rpm; // 13bit
@@ -71,22 +71,19 @@ struct ErrorAppendixMessage {
 };
 
 // Number of bytes to encode struct ControlMessage
-#define BYTES_LENGTH_CONTROL_MESSAGE 3
+#define BYTES_LENGTH_CONTROL_MESSAGE 4
 
 struct ControlMessage {
+    // // Header
+    // Protocol version. Must be checked by the receiving end to ensure decoding compatibility.
+    // Must be the first field to ensure mismatch detection even if other fields are corrupted due to protocol changes.
+    uint8_t protocol_version; // 8bit
+    // // Communication
     // Acknowledge value that should be returned in the StatusMessage. Must be non-zero.
     uint8_t acknowledge; // 8bit
+    // // Command
     Mode mode; // 3bit
     uint16_t target_rpm; // 13bit
-};
-
-// Number of bytes to encode struct ConnectAppendixMessage
-#define BYTES_LENGTH_CONNECT_APPENDIX_MESSAGE 3
-
-struct ConnectAppendixMessage {
-    // Acknowledge value that should be returned in the StatusMessage. Must be non-zero.
-    uint8_t acknowledge; // 8bit
-    uint16_t protocol_version; // 16bit
 };
 
 // Number of bytes to encode struct ConfigurationAppendixMessage
@@ -111,11 +108,6 @@ int DecodeErrorAppendixMessage(struct ErrorAppendixMessage *m, unsigned char *s)
 int EncodeControlMessage(struct ControlMessage *m, unsigned char *s);
 // Decode struct ControlMessage from given buffer s.
 int DecodeControlMessage(struct ControlMessage *m, unsigned char *s);
-
-// Encode struct ConnectAppendixMessage to given buffer s.
-int EncodeConnectAppendixMessage(struct ConnectAppendixMessage *m, unsigned char *s);
-// Decode struct ConnectAppendixMessage from given buffer s.
-int DecodeConnectAppendixMessage(struct ConnectAppendixMessage *m, unsigned char *s);
 
 // Encode struct ConfigurationAppendixMessage to given buffer s.
 int EncodeConfigurationAppendixMessage(struct ConfigurationAppendixMessage *m, unsigned char *s);

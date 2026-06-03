@@ -29,20 +29,20 @@ enum ErrorState : uint2 {
 message StatusMessage {
     //// Header
     // Protocol version. Must be checked by the receiving end to ensure decoding compatibility.
-    // Is the first field in every protocol version to ensure mismatch detection.
+    // Must be the first field to ensure mismatch detection even if other fields are corrupted due to protocol changes.
     uint8 protocol_version = 1;
+
+    //// Communication state
+    // Acknowledge value of the last received control message. Sent only once, zero afterwards until next control message.
+    uint8 control_acknowledgement = 10;
+    bool connection_established = 11;
 
     //// System state
     // If an error occurred an error appendix message will follow directly after this message!
-    ErrorState error = 11;
-    bool remote_control = 12;
+    ErrorState error = 20;
+    bool remote_control = 21;
     // Time since system start in ms. Receiving end must handle overflows!
-    uint32 time = 13;
-
-    //// Communication state
-    bool connection_established = 20;
-    // Acknowledge value of the last received control message. Sent only once, zero afterwards until next control message.
-    uint8 control_acknowledgement = 21;
+    uint32 time = 22;
 
     //// Motor control state
     Mode mode = 30;
@@ -58,18 +58,18 @@ message ErrorAppendixMessage {
 }
 
 message ControlMessage {
+    //// Header
+    // Protocol version. Must be checked by the receiving end to ensure decoding compatibility.
+    // Must be the first field to ensure mismatch detection even if other fields are corrupted due to protocol changes.
+    uint8 protocol_version = 1;
+
+    //// Communication
     // Acknowledge value that should be returned in the StatusMessage. Must be non-zero.
-    uint8 acknowledge = 1;
+    uint8 acknowledge = 10;
 
-    Mode mode = 10; 
-    uint13 target_rpm = 11;
-}
-
-message ConnectAppendixMessage {
-    // Acknowledge value that should be returned in the StatusMessage. Must be non-zero.
-    uint8 acknowledge = 1;
-
-    uint16 protocol_version = 10;
+    //// Command
+    Mode mode = 20;
+    uint13 target_rpm = 21;
 }
 
 message ConfigurationAppendixMessage {

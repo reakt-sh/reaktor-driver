@@ -18,11 +18,10 @@ unsigned long lastStatusMessageTime = 0; // Timestamp of the last sent status me
 unsigned long lastControlMessageTime = 0; // Timestamp of the last received control message
 unsigned int controlAcknowledgement = 0; // Acknowledgement code of last control message
 
-byte messageBuffer[max(BYTES_LENGTH_CONTROL_MESSAGE, max(BYTES_LENGTH_CONNECT_APPENDIX_MESSAGE, BYTES_LENGTH_CONFIGURATION_APPENDIX_MESSAGE))]; // Buffer for incoming message
+byte messageBuffer[max(BYTES_LENGTH_CONTROL_MESSAGE, BYTES_LENGTH_CONFIGURATION_APPENDIX_MESSAGE)]; // Buffer for incoming message
 unsigned int messageBufferPosition = 0; // Current position in the message buffer
 enum class ExpectedMessage {
     CONTROL_MESSAGE,
-    CONNECT_APPENDIX_MESSAGE,
     CONFIGURATION_APPENDIX_MESSAGE
 } expectedMessage = ExpectedMessage::CONTROL_MESSAGE; // Type of message we are currently expecting
 // VS Code shows an error on this line, which is a false-positive (https://github.com/microsoft/vscode-cpptools/issues/8175)
@@ -30,11 +29,11 @@ enum class ExpectedMessage {
 // Current status
 struct StatusMessage status = {
     .protocol_version = COMM_PROTOCOL_VERSION,
+    .control_acknowledgement = 0,
+    .connection_established = false,
     .error = NO_ERROR,
     .remote_control = false,
     .time = 0,
-    .connection_established = false,
-    .control_acknowledgement = 0,
     .mode = NEUTRAL,
     .motor_rpm = 0,
     .target_rpm = 0,
@@ -70,15 +69,6 @@ bool handleCommunication(bool remoteControlEnabled, tControlCommand* command) {
 
                     messageBufferPosition = 0; // Reset buffer position for next message
                     return control;
-                }
-                break;
-            case ExpectedMessage::CONNECT_APPENDIX_MESSAGE:
-                if (messageBufferPosition >= BYTES_LENGTH_CONNECT_APPENDIX_MESSAGE) {
-                    processConnectMessage();
-
-                    expectedMessage = ExpectedMessage::CONTROL_MESSAGE; // Reset expected message type
-                    messageBufferPosition = 0; // Reset buffer position for next message
-                    return false;
                 }
                 break;
             case ExpectedMessage::CONFIGURATION_APPENDIX_MESSAGE:
@@ -158,12 +148,18 @@ bool processControlMessage(bool remoteControlEnabled, tControlCommand* command) 
         // Store acknowledgement code
         controlAcknowledgement = controlMessage.acknowledge;
 
+        // Check protocol version
+        if (controlMessage.protocol_version != COMM_PROTOCOL_VERSION) {
+            registerError(ERROR_COMM_CONNECTION_VERSION_MISMATCH);
+            isConnected = false; // Peer is incompatible
+            return false;
+        }
+
         if (controlMessage.mode == HEARTBEAT) {
             // Just a keep-alive message, ignore payload
             return false;
         } else if (controlMessage.mode == CONNECT) {
-            // Switch to expecting connect appendix message
-            expectedMessage = ExpectedMessage::CONNECT_APPENDIX_MESSAGE;
+            isConnected = true; // Protocol version was check beforehand, so connection is fine
             return false;
         } else if (!isConnected) {
             registerError(ERROR_COMM_CONNECTION_NOT_ESTABLISHED);
@@ -180,27 +176,6 @@ bool processControlMessage(bool remoteControlEnabled, tControlCommand* command) 
         }
     }
     return false;
-}
-
-/**
- * Processes an incoming connect appendix message.
- * Validates the protocol version and registers an error if there is a mismatch.
- */
-void processConnectMessage() {
-    // Decode message
-    struct ConnectAppendixMessage connectMessage;
-    DecodeConnectAppendixMessage(&connectMessage, messageBuffer);
-
-    // Store acknowledgement code
-    controlAcknowledgement = connectMessage.acknowledge;
-
-    // Check protocol version
-    if (connectMessage.protocol_version != COMM_PROTOCOL_VERSION) {
-        registerError(ERROR_COMM_CONNECTION_VERSION_MISMATCH);
-    } else {
-        // Protocol version matches, connection is valid
-        isConnected = true;
-    }
 }
 
 /**

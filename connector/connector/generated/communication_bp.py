@@ -85,8 +85,12 @@ class StatusMessage(bp.MessageBase):
 
     # // Header
     # Protocol version. Must be checked by the receiving end to ensure decoding compatibility.
-    # Is the first field in every protocol version to ensure mismatch detection.
+    # Must be the first field to ensure mismatch detection even if other fields are corrupted due to protocol changes.
     protocol_version: int = 0 # 8bit
+    # // Communication state
+    # Acknowledge value of the last received control message. Sent only once, zero afterwards until next control message.
+    control_acknowledgement: int = 0 # 8bit
+    connection_established: bool = False # 1bit
     # // System state
     # If an error occurred an error appendix message will follow directly after this message!
     error: Union[int, ErrorState] = ErrorState.NO_ERROR
@@ -95,10 +99,6 @@ class StatusMessage(bp.MessageBase):
     remote_control: bool = False # 1bit
     # Time since system start in ms. Receiving end must handle overflows!
     time: int = 0 # 32bit
-    # // Communication state
-    connection_established: bool = False # 1bit
-    # Acknowledge value of the last received control message. Sent only once, zero afterwards until next control message.
-    control_acknowledgement: int = 0 # 8bit
     # // Motor control state
     mode: Union[int, Mode] = Mode.DRIVE_MODE_NEUTRAL
     # This field is a proxy to hold integer value of enum field 'mode'
@@ -140,11 +140,11 @@ class StatusMessage(bp.MessageBase):
     def bp_processor(self) -> bp.Processor:
         field_processors: List[bp.Processor] = [
             bp.MessageFieldProcessor(1, bp.Uint(8)),
-            bp.MessageFieldProcessor(11, bp_processor_ErrorState()),
-            bp.MessageFieldProcessor(12, bp.Bool()),
-            bp.MessageFieldProcessor(13, bp.Uint(32)),
-            bp.MessageFieldProcessor(20, bp.Bool()),
-            bp.MessageFieldProcessor(21, bp.Uint(8)),
+            bp.MessageFieldProcessor(10, bp.Uint(8)),
+            bp.MessageFieldProcessor(11, bp.Bool()),
+            bp.MessageFieldProcessor(20, bp_processor_ErrorState()),
+            bp.MessageFieldProcessor(21, bp.Bool()),
+            bp.MessageFieldProcessor(22, bp.Uint(32)),
             bp.MessageFieldProcessor(30, bp_processor_Mode()),
             bp.MessageFieldProcessor(31, bp.Uint(13)),
             bp.MessageFieldProcessor(32, bp.Uint(13)),
@@ -155,16 +155,16 @@ class StatusMessage(bp.MessageBase):
     def bp_set_byte(self, di: bp.DataIndexer, lshift: int, b: bp.byte) -> None:
         if di.field_number == 1:
             self.protocol_version |= (int(b) << lshift)
-        if di.field_number == 11:
-            self.error |= (ErrorState(b) << lshift)
-        if di.field_number == 12:
-            self.remote_control = bool(b)
-        if di.field_number == 13:
-            self.time |= (int(b) << lshift)
-        if di.field_number == 20:
-            self.connection_established = bool(b)
-        if di.field_number == 21:
+        if di.field_number == 10:
             self.control_acknowledgement |= (int(b) << lshift)
+        if di.field_number == 11:
+            self.connection_established = bool(b)
+        if di.field_number == 20:
+            self.error |= (ErrorState(b) << lshift)
+        if di.field_number == 21:
+            self.remote_control = bool(b)
+        if di.field_number == 22:
+            self.time |= (int(b) << lshift)
         if di.field_number == 30:
             self.mode |= (Mode(b) << lshift)
         if di.field_number == 31:
@@ -178,16 +178,16 @@ class StatusMessage(bp.MessageBase):
     def bp_get_byte(self, di: bp.DataIndexer, rshift: int) -> bp.byte:
         if di.field_number == 1:
             return (self.protocol_version >> rshift) & 255
-        if di.field_number == 11:
-            return (self.error >> rshift) & 255
-        if di.field_number == 12:
-            return (int(self.remote_control) >> rshift) & 255
-        if di.field_number == 13:
-            return (self.time >> rshift) & 255
-        if di.field_number == 20:
-            return (int(self.connection_established) >> rshift) & 255
-        if di.field_number == 21:
+        if di.field_number == 10:
             return (self.control_acknowledgement >> rshift) & 255
+        if di.field_number == 11:
+            return (int(self.connection_established) >> rshift) & 255
+        if di.field_number == 20:
+            return (self.error >> rshift) & 255
+        if di.field_number == 21:
+            return (int(self.remote_control) >> rshift) & 255
+        if di.field_number == 22:
+            return (self.time >> rshift) & 255
         if di.field_number == 30:
             return (self.mode >> rshift) & 255
         if di.field_number == 31:
@@ -281,10 +281,16 @@ class ErrorAppendixMessage(bp.MessageBase):
 @dataclass
 class ControlMessage(bp.MessageBase):
     # Number of bytes to serialize class ControlMessage
-    BYTES_LENGTH: ClassVar[int] = 3
+    BYTES_LENGTH: ClassVar[int] = 4
 
+    # // Header
+    # Protocol version. Must be checked by the receiving end to ensure decoding compatibility.
+    # Must be the first field to ensure mismatch detection even if other fields are corrupted due to protocol changes.
+    protocol_version: int = 0 # 8bit
+    # // Communication
     # Acknowledge value that should be returned in the StatusMessage. Must be non-zero.
     acknowledge: int = 0 # 8bit
+    # // Command
     mode: Union[int, Mode] = Mode.DRIVE_MODE_NEUTRAL
     # This field is a proxy to hold integer value of enum field 'mode'
     _enum_field_proxy__mode: int = field(init=False, repr=False) # 3bit
@@ -311,89 +317,32 @@ class ControlMessage(bp.MessageBase):
     def bp_processor(self) -> bp.Processor:
         field_processors: List[bp.Processor] = [
             bp.MessageFieldProcessor(1, bp.Uint(8)),
-            bp.MessageFieldProcessor(10, bp_processor_Mode()),
-            bp.MessageFieldProcessor(11, bp.Uint(13)),
+            bp.MessageFieldProcessor(10, bp.Uint(8)),
+            bp.MessageFieldProcessor(20, bp_processor_Mode()),
+            bp.MessageFieldProcessor(21, bp.Uint(13)),
         ]
-        return bp.MessageProcessor(False, 24, field_processors)
+        return bp.MessageProcessor(False, 32, field_processors)
 
     def bp_set_byte(self, di: bp.DataIndexer, lshift: int, b: bp.byte) -> None:
         if di.field_number == 1:
-            self.acknowledge |= (int(b) << lshift)
+            self.protocol_version |= (int(b) << lshift)
         if di.field_number == 10:
+            self.acknowledge |= (int(b) << lshift)
+        if di.field_number == 20:
             self.mode |= (Mode(b) << lshift)
-        if di.field_number == 11:
+        if di.field_number == 21:
             self.target_rpm |= (int(b) << lshift)
         return
 
     def bp_get_byte(self, di: bp.DataIndexer, rshift: int) -> bp.byte:
         if di.field_number == 1:
-            return (self.acknowledge >> rshift) & 255
-        if di.field_number == 10:
-            return (self.mode >> rshift) & 255
-        if di.field_number == 11:
-            return (self.target_rpm >> rshift) & 255
-        return bp.byte(0)  # Won't reached
-
-    def bp_get_accessor(self, di: bp.DataIndexer) -> bp.Accessor:
-        return bp.NilAccessor() # Won't reached
-
-    def encode(self) -> bytearray:
-        """
-        Encode this object to bytearray.
-        """
-        s = bytearray(self.BYTES_LENGTH)
-        ctx = bp.ProcessContext(True, s)
-        self.bp_processor().process(ctx, bp.NIL_DATA_INDEXER, self)
-        return ctx.s
-
-    def decode(self, s: bytearray) -> None:
-        """
-        Decode given bytearray s to this object.
-        :param s: A bytearray with length at least `BYTES_LENGTH`.
-        """
-        assert len(s) >= self.BYTES_LENGTH, bp.NotEnoughBytes()
-        ctx = bp.ProcessContext(False, s)
-        self.bp_processor().process(ctx, bp.NIL_DATA_INDEXER, self)
-
-    def bp_process_int(self, di: bp.DataIndexer) -> None:
-        return
-
-
-@dataclass
-class ConnectAppendixMessage(bp.MessageBase):
-    # Number of bytes to serialize class ConnectAppendixMessage
-    BYTES_LENGTH: ClassVar[int] = 3
-
-    # Acknowledge value that should be returned in the StatusMessage. Must be non-zero.
-    acknowledge: int = 0 # 8bit
-    protocol_version: int = 0 # 16bit
-
-    def __post_init__(self):
-        pass
-
-    @staticmethod
-    def dict_factory(kv_pairs):
-        return {k: v for k, v in kv_pairs if not k.startswith('_enum_field_proxy__')}
-
-    def bp_processor(self) -> bp.Processor:
-        field_processors: List[bp.Processor] = [
-            bp.MessageFieldProcessor(1, bp.Uint(8)),
-            bp.MessageFieldProcessor(10, bp.Uint(16)),
-        ]
-        return bp.MessageProcessor(False, 24, field_processors)
-
-    def bp_set_byte(self, di: bp.DataIndexer, lshift: int, b: bp.byte) -> None:
-        if di.field_number == 1:
-            self.acknowledge |= (int(b) << lshift)
-        if di.field_number == 10:
-            self.protocol_version |= (int(b) << lshift)
-        return
-
-    def bp_get_byte(self, di: bp.DataIndexer, rshift: int) -> bp.byte:
-        if di.field_number == 1:
-            return (self.acknowledge >> rshift) & 255
-        if di.field_number == 10:
             return (self.protocol_version >> rshift) & 255
+        if di.field_number == 10:
+            return (self.acknowledge >> rshift) & 255
+        if di.field_number == 20:
+            return (self.mode >> rshift) & 255
+        if di.field_number == 21:
+            return (self.target_rpm >> rshift) & 255
         return bp.byte(0)  # Won't reached
 
     def bp_get_accessor(self, di: bp.DataIndexer) -> bp.Accessor:
