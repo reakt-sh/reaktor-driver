@@ -2,7 +2,6 @@
 INTERNAL message handler for decoding and encoding messages to/from the vehicle.
 """
 
-import logging
 import asyncio
 from datetime import datetime
 from typing import Callable
@@ -13,8 +12,9 @@ from .generated.communication_bp import StatusMessage, ControlAnnouncementMessag
 from .generated.config_communication import COMM_STATUS_MESSAGE_TIME_BITSIZE, COMM_MESSAGE_ACKNOWLEDGEMENT_CODE_BITSIZE, COMM_CONTROL_MESSAGE_ACKNOWLEDGEMENT_TIME, COMM_PROTOCOL_VERSION
 from .generated.config_vehicle import MOTOR_SPEED_TRANSMISSION_FACTOR
 from .generated.errors import ERROR_MAP
+from . import CONNECTOR_ROOT_LOGGER
 
-logger = logging.getLogger("connector:internal:messages")
+logger = CONNECTOR_ROOT_LOGGER.getChild("internal.messages")
 
 class MessageHandler:
     """Handler for encoding and decoding messages to/from the vehicle."""

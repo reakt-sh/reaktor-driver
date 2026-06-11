@@ -11,8 +11,9 @@ from .generated.config_communication import COMM_SERIAL_BAUDRATE, COMM_CONTROL_M
 from .serial_connection_handler import SerialConnectionHandler
 from .message_handler import MessageHandler
 from .data import Control, Status
+from . import CONNECTOR_ROOT_LOGGER
 
-logger = logging.getLogger("connector:connection")
+logger = CONNECTOR_ROOT_LOGGER.getChild("connection")
 
 class Connection:
     """Connection to the REAKTOR."""
@@ -121,3 +122,10 @@ class Connection:
             self._heartbeat_task.cancel()
         if self._serial:
             self._serial.close()
+
+    def activate_file_logging(self, file_path: str, level: int = logging.WARNING):
+        """Activate logging to a file."""
+        file_handler =logging.FileHandler(file_path)
+        file_handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
+        CONNECTOR_ROOT_LOGGER.addHandler(file_handler)
+        CONNECTOR_ROOT_LOGGER.setLevel(level)

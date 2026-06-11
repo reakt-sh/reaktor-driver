@@ -3,8 +3,8 @@ A simple test script for the motor driver connection.
 Tests with a fixed speed.
 """
 
-import asyncio
 import logging
+import asyncio
 from context import Connection, Status, Control, Mode
 
 TARGET_SPEED = 3  # Target speed in m/s
@@ -18,11 +18,9 @@ def set_status(s: Status):
     print("New status: ", s)
 
 async def main():
-    # Uncomment for debugging output
-    # logging.basicConfig(level=logging.DEBUG)
-
     # Open connection
     connection = Connection()
+    connection.activate_file_logging("simple_connector_test.log", level=logging.DEBUG)
     connection.add_status_listener(set_status)
     await connection.open("/dev/ttyUSB0")
 
