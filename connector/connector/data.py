@@ -26,6 +26,7 @@ class Control(BaseModel):
 class InternalState(BaseModel):
     """Internal state of the driver."""
     time_ms: int
+    connection_established: bool
     control_rpm: int
     target_rpm: int
     motor_rpm: int

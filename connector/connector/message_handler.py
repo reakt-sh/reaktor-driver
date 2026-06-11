@@ -107,6 +107,7 @@ class MessageHandler:
                     motor_speed=(status_msg.motor_rpm * MOTOR_SPEED_TRANSMISSION_FACTOR),
                     internal_state=InternalState(
                         time_ms=status_msg.time + time_overflow_offset,
+                        connection_established=status_msg.connection_established,
                         target_rpm=status_msg.target_rpm,
                         motor_rpm=status_msg.motor_rpm,
                         control_rpm=status_msg.control_rpm
@@ -139,6 +140,8 @@ class MessageHandler:
             if (datetime.now() - self._unacknowledged_codes[code]).total_seconds() * 1000 > COMM_CONTROL_MESSAGE_ACKNOWLEDGEMENT_TIME:
                 logger.error("Acknowledgement timeout. Code: %d. Sent: %s. Received: %s", code, self._unacknowledged_codes[code], datetime.now())
                 # TODO Raise problem further
+            else:
+                logger.debug("Received acknowledgement for code: %d", code)
             del self._unacknowledged_codes[code]
         else:
             logger.warning("Received unknown acknowledgement code: %d", code)
