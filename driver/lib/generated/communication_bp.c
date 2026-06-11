@@ -84,7 +84,19 @@ int DecodeErrorAppendixMessage(struct ErrorAppendixMessage *m, unsigned char *s)
     return 0;
 }
 
-int EncodeControlMessage(struct ControlMessage *m, unsigned char *s) {
+int EncodeControlAnnouncementMessage(struct ControlAnnouncementMessage *m, unsigned char *s) {
+    s[0] = (((unsigned char *)&((*m).acknowledge))[0] ) & 255;
+    s[1] = (((unsigned char *)&((*m).type))[0] ) & 7;
+    return 0;
+}
+
+int DecodeControlAnnouncementMessage(struct ControlAnnouncementMessage *m, unsigned char *s) {
+    ((unsigned char *)&((*m).acknowledge))[0] = (s[0] ) & 255;
+    ((unsigned char *)&((*m).type))[0] = (s[1] ) & 7;
+    return 0;
+}
+
+int EncodeMotorControlMessage(struct MotorControlMessage *m, unsigned char *s) {
     s[0] = (((unsigned char *)&((*m).acknowledge))[0] ) & 255;
     s[1] = (((unsigned char *)&((*m).mode))[0] ) & 7;
     s[1] |= (((unsigned char *)&((*m).target_rpm))[0] << 3) & 248;
@@ -93,7 +105,7 @@ int EncodeControlMessage(struct ControlMessage *m, unsigned char *s) {
     return 0;
 }
 
-int DecodeControlMessage(struct ControlMessage *m, unsigned char *s) {
+int DecodeMotorControlMessage(struct MotorControlMessage *m, unsigned char *s) {
     ((unsigned char *)&((*m).acknowledge))[0] = (s[0] ) & 255;
     ((unsigned char *)&((*m).mode))[0] = (s[1] ) & 7;
     ((unsigned char *)&((*m).target_rpm))[0] = (s[1] >> 3) & 31;
@@ -102,26 +114,26 @@ int DecodeControlMessage(struct ControlMessage *m, unsigned char *s) {
     return 0;
 }
 
-int EncodeConnectAppendixMessage(struct ConnectAppendixMessage *m, unsigned char *s) {
+int EncodeConnectionControlMessage(struct ConnectionControlMessage *m, unsigned char *s) {
     s[0] = (((unsigned char *)&((*m).acknowledge))[0] ) & 255;
     s[1] = (((unsigned char *)&((*m).protocol_version))[0] ) & 255;
     s[2] = (((unsigned char *)&((*m).protocol_version))[1] ) & 255;
     return 0;
 }
 
-int DecodeConnectAppendixMessage(struct ConnectAppendixMessage *m, unsigned char *s) {
+int DecodeConnectionControlMessage(struct ConnectionControlMessage *m, unsigned char *s) {
     ((unsigned char *)&((*m).acknowledge))[0] = (s[0] ) & 255;
     ((unsigned char *)&((*m).protocol_version))[0] = (s[1] ) & 255;
     ((unsigned char *)&((*m).protocol_version))[1] = (s[2] ) & 255;
     return 0;
 }
 
-int EncodeConfigurationAppendixMessage(struct ConfigurationAppendixMessage *m, unsigned char *s) {
+int EncodeConfigurationControlMessage(struct ConfigurationControlMessage *m, unsigned char *s) {
     s[0] = (((unsigned char *)&((*m).acknowledge))[0] ) & 255;
     return 0;
 }
 
-int DecodeConfigurationAppendixMessage(struct ConfigurationAppendixMessage *m, unsigned char *s) {
+int DecodeConfigurationControlMessage(struct ConfigurationControlMessage *m, unsigned char *s) {
     ((unsigned char *)&((*m).acknowledge))[0] = (s[0] ) & 255;
     return 0;
 }

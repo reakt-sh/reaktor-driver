@@ -23,19 +23,20 @@ typedef uint8_t Mode; // 3bit
 #define DRIVE_MODE_REVERSE 2
 #define DRIVE_MODE_PARKING 3
 #define DRIVE_MODE_EMERGENCY_STOP 4
-// // Special control modes only used by ControlMessages
-// Used as a keep-alive message. The driver will ignore remaining payload.
-#define HEARTBEAT 5
-// Used to initiate a connection handshake. The next message received by the driver must be a ConnectAppendixMessage.
-#define CONNECT 6
-// Used to initiate a reconfiguation of the driver. The next message received by the driver must be a ConfigurationAppendixMessage.
-#define CONFIG 7
 
 typedef uint8_t ErrorState; // 2bit
 
 #define NO_ERROR 0
 #define ERROR 1
 #define FATAL_ERROR 3
+
+typedef uint8_t ControlPayloadType; // 3bit
+
+#define HEARTBEAT 0
+// Used as a keep-alive message. No payload will follow.
+#define CONNECT 1
+#define MOTOR 2
+#define CONFIG 3
 
 // Number of bytes to encode struct StatusMessage
 #define BYTES_LENGTH_STATUS_MESSAGE 11
@@ -66,29 +67,39 @@ struct ErrorAppendixMessage {
     uint64_t errors; // 64bit
 };
 
-// Number of bytes to encode struct ControlMessage
-#define BYTES_LENGTH_CONTROL_MESSAGE 3
+// Number of bytes to encode struct ControlAnnouncementMessage
+#define BYTES_LENGTH_CONTROL_ANNOUNCEMENT_MESSAGE 2
 
-struct ControlMessage {
+struct ControlAnnouncementMessage {
+    // Acknowledge value that should be returned in the StatusMessage. Must be non-zero.
+    uint8_t acknowledge; // 8bit
+    // The type of the following control message with the actual payload
+    ControlPayloadType type; // 3bit
+};
+
+// Number of bytes to encode struct MotorControlMessage
+#define BYTES_LENGTH_MOTOR_CONTROL_MESSAGE 3
+
+struct MotorControlMessage {
     // Acknowledge value that should be returned in the StatusMessage. Must be non-zero.
     uint8_t acknowledge; // 8bit
     Mode mode; // 3bit
     uint16_t target_rpm; // 13bit
 };
 
-// Number of bytes to encode struct ConnectAppendixMessage
-#define BYTES_LENGTH_CONNECT_APPENDIX_MESSAGE 3
+// Number of bytes to encode struct ConnectionControlMessage
+#define BYTES_LENGTH_CONNECTION_CONTROL_MESSAGE 3
 
-struct ConnectAppendixMessage {
+struct ConnectionControlMessage {
     // Acknowledge value that should be returned in the StatusMessage. Must be non-zero.
     uint8_t acknowledge; // 8bit
     uint16_t protocol_version; // 16bit
 };
 
-// Number of bytes to encode struct ConfigurationAppendixMessage
-#define BYTES_LENGTH_CONFIGURATION_APPENDIX_MESSAGE 1
+// Number of bytes to encode struct ConfigurationControlMessage
+#define BYTES_LENGTH_CONFIGURATION_CONTROL_MESSAGE 1
 
-struct ConfigurationAppendixMessage {
+struct ConfigurationControlMessage {
     // Acknowledge value that should be returned in the StatusMessage. Must be non-zero.
     uint8_t acknowledge; // 8bit
 };
@@ -103,20 +114,25 @@ int EncodeErrorAppendixMessage(struct ErrorAppendixMessage *m, unsigned char *s)
 // Decode struct ErrorAppendixMessage from given buffer s.
 int DecodeErrorAppendixMessage(struct ErrorAppendixMessage *m, unsigned char *s);
 
-// Encode struct ControlMessage to given buffer s.
-int EncodeControlMessage(struct ControlMessage *m, unsigned char *s);
-// Decode struct ControlMessage from given buffer s.
-int DecodeControlMessage(struct ControlMessage *m, unsigned char *s);
+// Encode struct ControlAnnouncementMessage to given buffer s.
+int EncodeControlAnnouncementMessage(struct ControlAnnouncementMessage *m, unsigned char *s);
+// Decode struct ControlAnnouncementMessage from given buffer s.
+int DecodeControlAnnouncementMessage(struct ControlAnnouncementMessage *m, unsigned char *s);
 
-// Encode struct ConnectAppendixMessage to given buffer s.
-int EncodeConnectAppendixMessage(struct ConnectAppendixMessage *m, unsigned char *s);
-// Decode struct ConnectAppendixMessage from given buffer s.
-int DecodeConnectAppendixMessage(struct ConnectAppendixMessage *m, unsigned char *s);
+// Encode struct MotorControlMessage to given buffer s.
+int EncodeMotorControlMessage(struct MotorControlMessage *m, unsigned char *s);
+// Decode struct MotorControlMessage from given buffer s.
+int DecodeMotorControlMessage(struct MotorControlMessage *m, unsigned char *s);
 
-// Encode struct ConfigurationAppendixMessage to given buffer s.
-int EncodeConfigurationAppendixMessage(struct ConfigurationAppendixMessage *m, unsigned char *s);
-// Decode struct ConfigurationAppendixMessage from given buffer s.
-int DecodeConfigurationAppendixMessage(struct ConfigurationAppendixMessage *m, unsigned char *s);
+// Encode struct ConnectionControlMessage to given buffer s.
+int EncodeConnectionControlMessage(struct ConnectionControlMessage *m, unsigned char *s);
+// Decode struct ConnectionControlMessage from given buffer s.
+int DecodeConnectionControlMessage(struct ConnectionControlMessage *m, unsigned char *s);
+
+// Encode struct ConfigurationControlMessage to given buffer s.
+int EncodeConfigurationControlMessage(struct ConfigurationControlMessage *m, unsigned char *s);
+// Decode struct ConfigurationControlMessage from given buffer s.
+int DecodeConfigurationControlMessage(struct ConfigurationControlMessage *m, unsigned char *s);
 
 #if defined(__cplusplus)
 }

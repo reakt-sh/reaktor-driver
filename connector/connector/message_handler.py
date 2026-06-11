@@ -9,8 +9,8 @@ from typing import Callable
 from math import floor
 from .data import Control, InternalState, Status
 from .serial_connection_handler import SerialConnectionHandler
-from .generated.communication_bp import StatusMessage, ControlMessage, ConnectAppendixMessage, ErrorAppendixMessage, ErrorState, Mode
-from .generated.config_communication import COMM_STATUS_MESSAGE_TIME_BITSIZE, COMM_PROTOCOL_VERSION, COMM_MESSAGE_ACKNOWLEDGEMENT_CODE_BITSIZE, COMM_CONTROL_MESSAGE_ACKNOWLEDGEMENT_TIME
+from .generated.communication_bp import StatusMessage, ControlAnnouncementMessage, ConnectionControlMessage, MotorControlMessage, ErrorAppendixMessage, ErrorState, ControlPayloadType
+from .generated.config_communication import COMM_STATUS_MESSAGE_TIME_BITSIZE, COMM_MESSAGE_ACKNOWLEDGEMENT_CODE_BITSIZE, COMM_CONTROL_MESSAGE_ACKNOWLEDGEMENT_TIME, COMM_PROTOCOL_VERSION
 from .generated.config_vehicle import MOTOR_SPEED_TRANSMISSION_FACTOR
 from .generated.errors import ERROR_MAP
 
@@ -82,12 +82,15 @@ class MessageHandler:
                             notifier.set_result(True)
                             notified = True
                     elif status_msg.control_acknowledgement == connect_pending_ack:
-                        logger.error("Connection handshake with driver failed, resending request.")
-                        connect_pending_ack = self._send_connection_request()
+                        logger.error("Connection handshake with driver failed. Check protocol compatibility.")
+                        connect_pending_ack = -1
                 elif not status_msg.connection_established:
                     if notified:
                         logger.warning("Driver indicated lost connection, attempting to re-establish.")
-                    connect_pending_ack = self._send_connection_request()
+                        connect_pending_ack = self._send_connection_request()
+                    elif connect_pending_ack == 0:
+                        logger.info("Starting connection handshake with driver.")
+                        connect_pending_ack = self._send_connection_request()
                 # Handle timestamp overflow in status messages
                 if last_status_msg:
                     if status_msg.time < last_status_msg.time:
@@ -145,23 +148,23 @@ class MessageHandler:
         if not self._serial.is_ready():
             logger.error("Cannot send connection request: serial connection not yet ready")
             return 0
-        # Get next acknowledgement code
+        # Announcement message
+        pre_msg = ControlAnnouncementMessage(
+            acknowledge=self._get_next_acknowledgement_code(),
+            type=ControlPayloadType.CONNECT
+        )
+        logger.info("Sending control announcement message: %s", pre_msg.to_dict())
+        self._serial.send(pre_msg.encode())
+
+        # Get acknowledgement code for connection message
         ack_code = self._get_next_acknowledgement_code()
-        # Control message for connection request
-        msg = ControlMessage(
-            mode=Mode.CONNECT,
-            target_rpm=0,
-            acknowledge=ack_code
+        # Connection control message
+        msg = ConnectionControlMessage(
+            acknowledge=ack_code,
+            protocol_version=COMM_PROTOCOL_VERSION
         )
         logger.info("Sending connection control message: %s", msg.to_dict())
         self._serial.send(msg.encode())
-        # Connection appendix message
-        msg_appendix = ConnectAppendixMessage(
-            protocol_version=COMM_PROTOCOL_VERSION
-        )
-        logger.info("Sending connection appendix message: %s", msg_appendix.to_dict())
-        self._serial.send(msg.encode())
-
         return ack_code
 
     def send_control(self, control: Control) -> bool:
@@ -169,8 +172,17 @@ class MessageHandler:
         if not self._serial.is_ready():
             logger.error("Cannot send control message: serial connection not yet ready")
             return False
+        # Announcement message
+        pre_msg = ControlAnnouncementMessage(
+            acknowledge=self._get_next_acknowledgement_code(),
+            type=ControlPayloadType.MOTOR
+        )
+        logger.info("Sending control announcement message: %s", pre_msg.to_dict())
+        self._serial.send(pre_msg.encode())
+
+        # Actual control message
         rpm = floor(control.target_speed / MOTOR_SPEED_TRANSMISSION_FACTOR)
-        msg = ControlMessage(
+        msg = MotorControlMessage(
             mode=control.mode,
             target_rpm=rpm
         )
@@ -183,9 +195,9 @@ class MessageHandler:
         if not self._serial.is_ready():
             logger.error("Cannot send heartbeat message: serial connection not yet ready")
             return False
-        msg = ControlMessage(
-            mode=Mode.HEARTBEAT,
-            target_rpm=0
+        msg = ControlAnnouncementMessage(
+            acknowledge=self._get_next_acknowledgement_code(),
+            type=ControlPayloadType.HEARTBEAT
         )
         logger.info("Sending heartbeat control message: %s", msg.to_dict())
         self._serial.send(msg.encode())

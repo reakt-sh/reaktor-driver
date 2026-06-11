@@ -10,20 +10,19 @@ enum Mode : uint3 {
     DRIVE_MODE_REVERSE = 2;
     DRIVE_MODE_PARKING = 3;
     DRIVE_MODE_EMERGENCY_STOP = 4;
-
-    //// Special control modes only used by ControlMessages
-    // Used as a keep-alive message. The driver will ignore remaining payload.
-    HEARTBEAT = 5;
-    // Used to initiate a connection handshake. The next message received by the driver must be a ConnectAppendixMessage.
-    CONNECT = 6;
-    // Used to initiate a reconfiguation of the driver. The next message received by the driver must be a ConfigurationAppendixMessage.
-    CONFIG = 7;
 }
 
 enum ErrorState : uint2 {
     NO_ERROR = 0;
     ERROR = 1;
     FATAL_ERROR = 3;
+}
+
+enum ControlPayloadType : uint3 { // uint3 size to keep room for future types without changing message size
+    HEARTBEAT = 0; // Used as a keep-alive message. No payload will follow.
+    CONNECT = 1;
+    MOTOR = 2;
+    CONFIG = 3;
 }
 
 message StatusMessage {
@@ -52,23 +51,33 @@ message ErrorAppendixMessage {
     uint64 errors = 1;
 }
 
-message ControlMessage {
+message ControlAnnouncementMessage {
+    // Acknowledge value that should be returned in the StatusMessage. Must be non-zero.
+    uint8 acknowledge = 1;
+    // The type of the following control message with the actual payload
+    ControlPayloadType type = 2;
+
+    // Note that this message should not change, otherwise a failed connection handshare due to incompatibel protocol versions cannot be correctly detected.
+}
+
+message MotorControlMessage {
     // Acknowledge value that should be returned in the StatusMessage. Must be non-zero.
     uint8 acknowledge = 1;
 
-    Mode mode = 10; 
+    Mode mode = 10;
     uint13 target_rpm = 11;
 }
 
-message ConnectAppendixMessage {
+message ConnectionControlMessage {
     // Acknowledge value that should be returned in the StatusMessage. Must be non-zero.
     uint8 acknowledge = 1;
 
     uint16 protocol_version = 10;
 }
 
-message ConfigurationAppendixMessage {
+message ConfigurationControlMessage {
     // Acknowledge value that should be returned in the StatusMessage. Must be non-zero.
     uint8 acknowledge = 1;
 
+    // Coming later
 }

@@ -18,13 +18,14 @@ unsigned long lastStatusMessageTime = 0; // Timestamp of the last sent status me
 unsigned long lastControlMessageTime = 0; // Timestamp of the last received control message
 unsigned int controlAcknowledgement = 0; // Acknowledgement code of last control message
 
-byte messageBuffer[max(BYTES_LENGTH_CONTROL_MESSAGE, max(BYTES_LENGTH_CONNECT_APPENDIX_MESSAGE, BYTES_LENGTH_CONFIGURATION_APPENDIX_MESSAGE))]; // Buffer for incoming message
+byte messageBuffer[max(BYTES_LENGTH_CONTROL_ANNOUNCEMENT_MESSAGE, max(BYTES_LENGTH_MOTOR_CONTROL_MESSAGE, max(BYTES_LENGTH_CONNECTION_CONTROL_MESSAGE, BYTES_LENGTH_CONFIGURATION_CONTROL_MESSAGE)))]; // Buffer for incoming message
 unsigned int messageBufferPosition = 0; // Current position in the message buffer
 enum class ExpectedMessage {
-    CONTROL_MESSAGE,
-    CONNECT_APPENDIX_MESSAGE,
-    CONFIGURATION_APPENDIX_MESSAGE
-} expectedMessage = ExpectedMessage::CONTROL_MESSAGE; // Type of message we are currently expecting
+    CONTROL_ANNOUNCEMENT_MESSAGE,
+    MOTOR_CONTROL_MESSAGE,
+    CONNECTION_CONTROL_MESSAGE,
+    CONFIGURATION_CONTROL_MESSAGE,
+} expectedMessage = ExpectedMessage::CONTROL_ANNOUNCEMENT_MESSAGE; // Type of message we are currently expecting
 // VS Code shows an error on this line, which is a false-positive (https://github.com/microsoft/vscode-cpptools/issues/8175)
 
 // Current status
@@ -63,28 +64,37 @@ bool handleCommunication(bool remoteControlEnabled, tControlCommand* command) {
         // Process data
         // Only process one message at a time, to ensure each message is acknowledged
         switch (expectedMessage) {
-            case ExpectedMessage::CONTROL_MESSAGE:
-                if (messageBufferPosition >= BYTES_LENGTH_CONTROL_MESSAGE) {
-                    bool control = processControlMessage(remoteControlEnabled, command);
+            case ExpectedMessage::CONTROL_ANNOUNCEMENT_MESSAGE:
+                if (messageBufferPosition >= BYTES_LENGTH_CONTROL_ANNOUNCEMENT_MESSAGE) {
+                    processControlAnnouncementMessage();
 
-                    messageBufferPosition = 0; // Reset buffer position for next message
-                    return control;
-                }
-                break;
-            case ExpectedMessage::CONNECT_APPENDIX_MESSAGE:
-                if (messageBufferPosition >= BYTES_LENGTH_CONNECT_APPENDIX_MESSAGE) {
-                    processConnectMessage();
-
-                    expectedMessage = ExpectedMessage::CONTROL_MESSAGE; // Reset expected message type
                     messageBufferPosition = 0; // Reset buffer position for next message
                     return false;
                 }
                 break;
-            case ExpectedMessage::CONFIGURATION_APPENDIX_MESSAGE:
-                if (messageBufferPosition >= BYTES_LENGTH_CONFIGURATION_APPENDIX_MESSAGE) {
+            case ExpectedMessage::MOTOR_CONTROL_MESSAGE:
+                if (messageBufferPosition >= BYTES_LENGTH_MOTOR_CONTROL_MESSAGE) {
+                    bool control = processMotorMessage(remoteControlEnabled, command);
+
+                    expectedMessage = ExpectedMessage::CONTROL_ANNOUNCEMENT_MESSAGE; // Reset expected message type
+                    messageBufferPosition = 0; // Reset buffer position for next message
+                    return control;
+                }
+                break;
+            case ExpectedMessage::CONNECTION_CONTROL_MESSAGE:
+                if (messageBufferPosition >= BYTES_LENGTH_CONNECTION_CONTROL_MESSAGE) {
+                    processConnectMessage();
+
+                    expectedMessage = ExpectedMessage::CONTROL_ANNOUNCEMENT_MESSAGE; // Reset expected message type
+                    messageBufferPosition = 0; // Reset buffer position for next message
+                    return false;
+                }
+                break;
+            case ExpectedMessage::CONFIGURATION_CONTROL_MESSAGE:
+                if (messageBufferPosition >= BYTES_LENGTH_CONFIGURATION_CONTROL_MESSAGE) {
                     processConfigurationMessage();
 
-                    expectedMessage = ExpectedMessage::CONTROL_MESSAGE; // Reset expected message type
+                    expectedMessage = ExpectedMessage::CONTROL_ANNOUNCEMENT_MESSAGE; // Reset expected message type
                     messageBufferPosition = 0; // Reset buffer position for next message
                     return false;
                 }
@@ -137,7 +147,46 @@ void sendStatusReport(bool force) {
 // INTERNAL
 
 /**
- * Processes an incoming control message.
+ * Processes an incoming control advertisement message.
+ * This will determine potential follow-up messages.
+ */
+void processControlAnnouncementMessage() {
+    if (messageBufferPosition >= BYTES_LENGTH_CONTROL_ANNOUNCEMENT_MESSAGE) {
+        // Update last control message time
+        lastControlMessageTime = millis();
+
+        // Decode message
+        struct ControlAnnouncementMessage announcementMessage;
+        DecodeControlAnnouncementMessage(&announcementMessage, messageBuffer);
+
+        // Store acknowledgement code
+        controlAcknowledgement = announcementMessage.acknowledge;
+
+        if (announcementMessage.type == HEARTBEAT) {
+            // Just a keep-alive message, ignore payload
+        } else if (announcementMessage.type == CONNECT) {
+            // Switch to expecting connect appendix message
+            expectedMessage = ExpectedMessage::CONNECTION_CONTROL_MESSAGE;
+        } else if (announcementMessage.type == CONFIG) {
+            // Report protocol violation if no connection handshake was completed yet
+            if (!isConnected) {
+                registerError(ERROR_COMM_CONNECTION_NOT_ESTABLISHED);
+            }
+            // Switch to expecting configuration control message
+            expectedMessage = ExpectedMessage::CONFIGURATION_CONTROL_MESSAGE;
+        } else if (announcementMessage.type == MOTOR) {
+            // Report protocol violation if no connection handshake was completed yet
+            if (!isConnected) {
+                registerError(ERROR_COMM_CONNECTION_NOT_ESTABLISHED);
+            }
+            // Switch to expecting motor control message
+            expectedMessage = ExpectedMessage::MOTOR_CONTROL_MESSAGE;
+        }
+    }
+}
+
+/**
+ * Processes an incoming motor control message.
  * If in remote control mode and a valid control message is received, updates the command structure.
  *
  * @param remoteControlEnabled Indicates if remote control mode is enabled.
@@ -145,36 +194,26 @@ void sendStatusReport(bool force) {
  *
  * @returns true if a valid control command was processed, false otherwise.
  */
-bool processControlMessage(bool remoteControlEnabled, tControlCommand* command) {
-    if (messageBufferPosition >= BYTES_LENGTH_CONTROL_MESSAGE) {
+bool processMotorMessage(bool remoteControlEnabled, tControlCommand* command) {
+    if (messageBufferPosition >= BYTES_LENGTH_MOTOR_CONTROL_MESSAGE) {
         // Update last control message time
         lastControlMessageTime = millis();
 
         // Decode message
-        struct ControlMessage controlMessage;
-        DecodeControlMessage(&controlMessage, messageBuffer);
+        struct MotorControlMessage motorMessage;
+        DecodeMotorControlMessage(&motorMessage, messageBuffer);
 
         // Store acknowledgement code
-        controlAcknowledgement = controlMessage.acknowledge;
+        controlAcknowledgement = motorMessage.acknowledge;
 
-        if (controlMessage.mode == HEARTBEAT) {
-            // Just a keep-alive message, ignore payload
-            return false;
-        } else if (controlMessage.mode == CONNECT) {
-            // Switch to expecting connect appendix message
-            expectedMessage = ExpectedMessage::CONNECT_APPENDIX_MESSAGE;
-            return false;
-        } else if (!isConnected) {
+        // Report protocol violation if no connection handshake was completed yet
+        if (!isConnected) {
             registerError(ERROR_COMM_CONNECTION_NOT_ESTABLISHED);
             return false;
-        } else if (controlMessage.mode == CONFIG) {
-            // Switch to expecting configuration appendix message
-            expectedMessage = ExpectedMessage::CONFIGURATION_APPENDIX_MESSAGE;
-            return false;
         } else if (remoteControlEnabled) {
-            // Actual remote control message
-            command->mode = (DriveMode) controlMessage.mode;
-            command->target_rpm = controlMessage.target_rpm;
+            // Actual remote control commands
+            command->mode = (DriveMode) motorMessage.mode;
+            command->target_rpm = motorMessage.target_rpm;
             return true;
         }
     }
@@ -182,13 +221,13 @@ bool processControlMessage(bool remoteControlEnabled, tControlCommand* command) 
 }
 
 /**
- * Processes an incoming connect appendix message.
+ * Processes an incoming connection control message.
  * Validates the protocol version and registers an error if there is a mismatch.
  */
 void processConnectMessage() {
     // Decode message
-    struct ConnectAppendixMessage connectMessage;
-    DecodeConnectAppendixMessage(&connectMessage, messageBuffer);
+    struct ConnectionControlMessage connectMessage;
+    DecodeConnectionControlMessage(&connectMessage, messageBuffer);
 
     // Store acknowledgement code
     controlAcknowledgement = connectMessage.acknowledge;
@@ -203,17 +242,21 @@ void processConnectMessage() {
 }
 
 /**
- * Processes an incoming configuration appendix message.
+ * Processes an incoming configuration control message.
  */
 void processConfigurationMessage() {
     // Decode message
-    struct ConfigurationAppendixMessage configMessage;
-    DecodeConfigurationAppendixMessage(&configMessage, messageBuffer);
+    struct ConfigurationControlMessage configMessage;
+    DecodeConfigurationControlMessage(&configMessage, messageBuffer);
 
     // Store acknowledgement code
     controlAcknowledgement = configMessage.acknowledge;
 
-    // TODO apply configuration
+    if (!isConnected) {
+        registerError(ERROR_COMM_CONNECTION_NOT_ESTABLISHED);
+    } else {
+        // TODO apply configuration
+    }
 }
 
 void updateStatus () {

@@ -16,13 +16,6 @@ class Mode(IntEnum): # 3bit
     DRIVE_MODE_REVERSE = 2
     DRIVE_MODE_PARKING = 3
     DRIVE_MODE_EMERGENCY_STOP = 4
-# // Special control modes only used by ControlMessages
-# Used as a keep-alive message. The driver will ignore remaining payload.
-    HEARTBEAT = 5
-# Used to initiate a connection handshake. The next message received by the driver must be a ConnectAppendixMessage.
-    CONNECT = 6
-# Used to initiate a reconfiguation of the driver. The next message received by the driver must be a ConfigurationAppendixMessage.
-    CONFIG = 7
 
 
 # Aliases for backwards compatibility
@@ -31,13 +24,6 @@ DRIVE_MODE_FORWARD: Mode = Mode.DRIVE_MODE_FORWARD
 DRIVE_MODE_REVERSE: Mode = Mode.DRIVE_MODE_REVERSE
 DRIVE_MODE_PARKING: Mode = Mode.DRIVE_MODE_PARKING
 DRIVE_MODE_EMERGENCY_STOP: Mode = Mode.DRIVE_MODE_EMERGENCY_STOP
-# // Special control modes only used by ControlMessages
-# Used as a keep-alive message. The driver will ignore remaining payload.
-HEARTBEAT: Mode = Mode.HEARTBEAT
-# Used to initiate a connection handshake. The next message received by the driver must be a ConnectAppendixMessage.
-CONNECT: Mode = Mode.CONNECT
-# Used to initiate a reconfiguation of the driver. The next message received by the driver must be a ConfigurationAppendixMessage.
-CONFIG: Mode = Mode.CONFIG
 
 
 _MODE_VALUE_TO_NAME_MAP: Dict[Mode, str] = {
@@ -46,9 +32,6 @@ _MODE_VALUE_TO_NAME_MAP: Dict[Mode, str] = {
     Mode.DRIVE_MODE_REVERSE: "DRIVE_MODE_REVERSE",
     Mode.DRIVE_MODE_PARKING: "DRIVE_MODE_PARKING",
     Mode.DRIVE_MODE_EMERGENCY_STOP: "DRIVE_MODE_EMERGENCY_STOP",
-    Mode.HEARTBEAT: "HEARTBEAT",
-    Mode.CONNECT: "CONNECT",
-    Mode.CONFIG: "CONFIG",
 }
 
 def bp_processor_Mode() -> bp.Processor:
@@ -76,6 +59,34 @@ _ERRORSTATE_VALUE_TO_NAME_MAP: Dict[ErrorState, str] = {
 
 def bp_processor_ErrorState() -> bp.Processor:
     return bp.EnumProcessor(bp.Uint(2))
+
+
+@unique
+class ControlPayloadType(IntEnum): # 3bit
+    HEARTBEAT = 0
+# Used as a keep-alive message. No payload will follow.
+    CONNECT = 1
+    MOTOR = 2
+    CONFIG = 3
+
+
+# Aliases for backwards compatibility
+HEARTBEAT: ControlPayloadType = ControlPayloadType.HEARTBEAT
+# Used as a keep-alive message. No payload will follow.
+CONNECT: ControlPayloadType = ControlPayloadType.CONNECT
+MOTOR: ControlPayloadType = ControlPayloadType.MOTOR
+CONFIG: ControlPayloadType = ControlPayloadType.CONFIG
+
+
+_CONTROLPAYLOADTYPE_VALUE_TO_NAME_MAP: Dict[ControlPayloadType, str] = {
+    ControlPayloadType.HEARTBEAT: "HEARTBEAT",
+    ControlPayloadType.CONNECT: "CONNECT",
+    ControlPayloadType.MOTOR: "MOTOR",
+    ControlPayloadType.CONFIG: "CONFIG",
+}
+
+def bp_processor_ControlPayloadType() -> bp.Processor:
+    return bp.EnumProcessor(bp.Uint(3))
 
 
 @dataclass
@@ -270,8 +281,84 @@ class ErrorAppendixMessage(bp.MessageBase):
 
 
 @dataclass
-class ControlMessage(bp.MessageBase):
-    # Number of bytes to serialize class ControlMessage
+class ControlAnnouncementMessage(bp.MessageBase):
+    # Number of bytes to serialize class ControlAnnouncementMessage
+    BYTES_LENGTH: ClassVar[int] = 2
+
+    # Acknowledge value that should be returned in the StatusMessage. Must be non-zero.
+    acknowledge: int = 0 # 8bit
+    # The type of the following control message with the actual payload
+    type: Union[int, ControlPayloadType] = ControlPayloadType.HEARTBEAT
+    # This field is a proxy to hold integer value of enum field 'type'
+    _enum_field_proxy__type: int = field(init=False, repr=False) # 3bit
+
+    def __post_init__(self):
+        # initialize handling of enum field 'type' as `enum.IntEnum`
+        if not isinstance(getattr(ControlAnnouncementMessage, "type", False), property):
+            self._enum_field_proxy__type = self.type
+            ControlAnnouncementMessage.type = property(ControlAnnouncementMessage._get_type, ControlAnnouncementMessage._set_type)  # type: ignore
+
+    @staticmethod
+    def dict_factory(kv_pairs):
+        return {k: v for k, v in kv_pairs if not k.startswith('_enum_field_proxy__')}
+
+    def _get_type(self) -> ControlPayloadType:
+        """property getter for enum proxy field"""
+        return ControlPayloadType(self._enum_field_proxy__type)
+
+    def _set_type(self, val):
+        """property setter for enum proxy field"""
+        self._enum_field_proxy__type = val
+
+    def bp_processor(self) -> bp.Processor:
+        field_processors: List[bp.Processor] = [
+            bp.MessageFieldProcessor(1, bp.Uint(8)),
+            bp.MessageFieldProcessor(2, bp_processor_ControlPayloadType()),
+        ]
+        return bp.MessageProcessor(False, 11, field_processors)
+
+    def bp_set_byte(self, di: bp.DataIndexer, lshift: int, b: bp.byte) -> None:
+        if di.field_number == 1:
+            self.acknowledge |= (int(b) << lshift)
+        if di.field_number == 2:
+            self.type |= (ControlPayloadType(b) << lshift)
+        return
+
+    def bp_get_byte(self, di: bp.DataIndexer, rshift: int) -> bp.byte:
+        if di.field_number == 1:
+            return (self.acknowledge >> rshift) & 255
+        if di.field_number == 2:
+            return (self.type >> rshift) & 255
+        return bp.byte(0)  # Won't reached
+
+    def bp_get_accessor(self, di: bp.DataIndexer) -> bp.Accessor:
+        return bp.NilAccessor() # Won't reached
+
+    def encode(self) -> bytearray:
+        """
+        Encode this object to bytearray.
+        """
+        s = bytearray(self.BYTES_LENGTH)
+        ctx = bp.ProcessContext(True, s)
+        self.bp_processor().process(ctx, bp.NIL_DATA_INDEXER, self)
+        return ctx.s
+
+    def decode(self, s: bytearray) -> None:
+        """
+        Decode given bytearray s to this object.
+        :param s: A bytearray with length at least `BYTES_LENGTH`.
+        """
+        assert len(s) >= self.BYTES_LENGTH, bp.NotEnoughBytes()
+        ctx = bp.ProcessContext(False, s)
+        self.bp_processor().process(ctx, bp.NIL_DATA_INDEXER, self)
+
+    def bp_process_int(self, di: bp.DataIndexer) -> None:
+        return
+
+
+@dataclass
+class MotorControlMessage(bp.MessageBase):
+    # Number of bytes to serialize class MotorControlMessage
     BYTES_LENGTH: ClassVar[int] = 3
 
     # Acknowledge value that should be returned in the StatusMessage. Must be non-zero.
@@ -283,9 +370,9 @@ class ControlMessage(bp.MessageBase):
 
     def __post_init__(self):
         # initialize handling of enum field 'mode' as `enum.IntEnum`
-        if not isinstance(getattr(ControlMessage, "mode", False), property):
+        if not isinstance(getattr(MotorControlMessage, "mode", False), property):
             self._enum_field_proxy__mode = self.mode
-            ControlMessage.mode = property(ControlMessage._get_mode, ControlMessage._set_mode)  # type: ignore
+            MotorControlMessage.mode = property(MotorControlMessage._get_mode, MotorControlMessage._set_mode)  # type: ignore
 
     @staticmethod
     def dict_factory(kv_pairs):
@@ -351,8 +438,8 @@ class ControlMessage(bp.MessageBase):
 
 
 @dataclass
-class ConnectAppendixMessage(bp.MessageBase):
-    # Number of bytes to serialize class ConnectAppendixMessage
+class ConnectionControlMessage(bp.MessageBase):
+    # Number of bytes to serialize class ConnectionControlMessage
     BYTES_LENGTH: ClassVar[int] = 3
 
     # Acknowledge value that should be returned in the StatusMessage. Must be non-zero.
@@ -413,8 +500,8 @@ class ConnectAppendixMessage(bp.MessageBase):
 
 
 @dataclass
-class ConfigurationAppendixMessage(bp.MessageBase):
-    # Number of bytes to serialize class ConfigurationAppendixMessage
+class ConfigurationControlMessage(bp.MessageBase):
+    # Number of bytes to serialize class ConfigurationControlMessage
     BYTES_LENGTH: ClassVar[int] = 1
 
     # Acknowledge value that should be returned in the StatusMessage. Must be non-zero.

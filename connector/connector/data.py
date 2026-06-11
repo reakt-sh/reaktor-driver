@@ -16,7 +16,6 @@ class Mode(IntEnum):
     REVERSE = MessageMode.DRIVE_MODE_REVERSE
     PARKING = MessageMode.DRIVE_MODE_PARKING
     EMERGENCY_STOP = MessageMode.DRIVE_MODE_EMERGENCY_STOP
-
 type SpeedType = Annotated[float, Field(ge=0, allow_inf_nan=False, description="Speed in m/s")]
 
 class Control(BaseModel):
