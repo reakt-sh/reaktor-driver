@@ -4,6 +4,7 @@ import sys
 import json
 from os import makedirs, environ, remove
 from os.path import join, abspath, dirname, isdir, splitext, basename
+from shutil import copy
 from subprocess import run
 from glob import glob
 from jsonschema import validate
@@ -18,6 +19,8 @@ VENV_DIR = join(DEF_DIR, ".venv")
 CONNECTOR_DEST_DIR = join(ROOT_DIR, "connector", "connector", "generated")
 DRIVER_DEST_DIR = join(ROOT_DIR, "driver", "lib", "generated")
 PROTO_SRC = join(DEF_DIR, "communication.bitproto")
+TYPES_C_SRC = join(DEF_DIR, "types", "c")
+TYPES_PY_SRC = join(DEF_DIR, "types", "py")
 
 CLEANUP_WHITELIST = [
     ".gitignore",
@@ -65,13 +68,17 @@ def generate():
                 print(" - Removing old file:", file)
                 remove(join(DRIVER_DEST_DIR, file))
 
-    # TODO Cleanup old generated files
-
     print("# Generating serial protocol for driver")
     run_cmd(["bitproto", "c", PROTO_SRC, DRIVER_DEST_DIR, "-O"], cwd=DEF_DIR)
 
     print("# Generating definitions for driver")
     generate_def_files(definitions, DRIVER_DEST_DIR, ".h", generate_c_header, generate_c_comment, generate_c_definition, DYNAMIC_GENERATORS_C)
+
+    if isdir(TYPES_C_SRC):
+        print("# Copying C types")
+        for file in glob("*", root_dir=TYPES_C_SRC):
+            print(" - ", file)
+            copy(join(TYPES_C_SRC, file), DRIVER_DEST_DIR)
 
     # Connector
     print("# Preparing generated code directory for connector")
@@ -89,6 +96,12 @@ def generate():
 
     print("# Generating definitions for connector")
     generate_def_files(definitions, CONNECTOR_DEST_DIR, ".py", lambda _: None, generate_py_comment, generate_py_definition, DYNAMIC_GENERATORS_PY)
+
+    if isdir(TYPES_PY_SRC):
+        print("# Copying Python types")
+        for file in glob("*", root_dir=TYPES_PY_SRC):
+            print(" - ", file)
+            copy(join(TYPES_PY_SRC, file), CONNECTOR_DEST_DIR)
 
     print("# Done")
 
