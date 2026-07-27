@@ -72,6 +72,36 @@ def bp_processor_ErrorState() -> bp.Processor:
     return bp.EnumProcessor(bp.Uint(2))
 
 
+@unique
+class ControlPayloadType(IntEnum): # 3bit
+# uint3 size to keep room for future types without changing message size
+    HEARTBEAT = 0
+# Used as a keep-alive message. No payload will follow.
+    CONNECT = 1
+    MOTOR = 2
+    CONFIG = 3
+
+
+# Aliases for backwards compatibility
+# uint3 size to keep room for future types without changing message size
+HEARTBEAT: ControlPayloadType = ControlPayloadType.HEARTBEAT
+# Used as a keep-alive message. No payload will follow.
+CONNECT: ControlPayloadType = ControlPayloadType.CONNECT
+MOTOR: ControlPayloadType = ControlPayloadType.MOTOR
+CONFIG: ControlPayloadType = ControlPayloadType.CONFIG
+
+
+_CONTROLPAYLOADTYPE_VALUE_TO_NAME_MAP: Dict[ControlPayloadType, str] = {
+    ControlPayloadType.HEARTBEAT: "HEARTBEAT",
+    ControlPayloadType.CONNECT: "CONNECT",
+    ControlPayloadType.MOTOR: "MOTOR",
+    ControlPayloadType.CONFIG: "CONFIG",
+}
+
+def bp_processor_ControlPayloadType() -> bp.Processor:
+    return bp.EnumProcessor(bp.Uint(3))
+
+
 @dataclass
 class StatusMessage(bp.MessageBase):
     # Number of bytes to serialize class StatusMessage

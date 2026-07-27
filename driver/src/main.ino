@@ -56,7 +56,7 @@ void loop(void) {
                 setNextMode(NEUTRAL);
                 setTargetRPM(0);
             } else {
-                registerError(ERROR_CONTROL_MODE_SWITCH_UNSAFE);
+                // registerError(ERROR_CONTROL_MODE_SWITCH_UNSAFE);
                 triggerEmergencyStop();
             }
         }

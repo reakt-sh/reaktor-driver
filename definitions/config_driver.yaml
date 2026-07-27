@@ -9,3 +9,11 @@ driver_braking_threshold_rpm:
   value: 80
   c_type: int
   comment: "Threshold as difference between current and target speed (in RPM) at which the brakes will be engaged to further decelerate."
+driver_modes_emergency_recovery_time_ms:
+  value: 3000
+  c_type: int
+  comment: "Time of no movement in ms until the driver allows leaving emergency brake mode."
+driver_modes_movement_threshold_rpm:
+  value: 10
+  c_type: int
+  comment: "Threshold (in RPM) at which the vehicle is considered to be moving."

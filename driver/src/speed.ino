@@ -69,7 +69,7 @@ void controlSpeed() {
                 setBrakeSignal(false);
             }
         } else {
-            // Try to kep the vehicle at a standstill
+            // Try to keep the vehicle at a standstill
             setBrakeSignal(true);
         }
     } else {

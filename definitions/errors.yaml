@@ -13,6 +13,16 @@ error_remote_control_timeout: 1
 error_remote_control_timeout_message: "While in active remote control mode, no control (or heartbeat) message was received in the expected interval."
 error_hardware_no_throttle_dac: 2
 error_hardware_no_throttle_dac_message: "No connection to motor throttle control component (DAC via I2C)."
+error_modes_manual_mode_switch_conflicting: 4
+error_modes_manual_mode_switch_conflicting_message: "Hardware malfuntion in manual mode switch. Both directions are active."
+error_modes_vehicle_moving_while_parking: 6
+error_modes_vehicle_moving_while_parking_message: "Vehicle is moving while in parking mode."
+error_modes_direction_conflicts_movement: 7
+error_modes_direction_conflicts_movement_message: "Requested movement direction opposes the current movement direction of the vehicle."
+error_modes_direction_conflicts_unknown_movement: 8
+error_modes_direction_conflicts_unknown_movement_message: "Requested movement direction may oppose the current movement direction of the vehicle which cannot be determined."
+error_modes_emergency_not_yet_recoverable: 9
+error_modes_emergency_not_yet_recoverable_message: "Emergency mode is not yet recoverable. Only requested a driving mode after the error is resolved and the vehicle did not move for the configured time."
 
 # Automatically generated mapping of error codes to messages
 doc_error_map:

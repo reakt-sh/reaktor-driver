@@ -34,6 +34,14 @@ typedef uint8_t ErrorState; // 2bit
 #define ERROR 1
 #define FATAL_ERROR 3
 
+typedef uint8_t ControlPayloadType; // 3bit
+
+#define HEARTBEAT 0
+// Used as a keep-alive message. No payload will follow.
+#define CONNECT 1
+#define MOTOR 2
+#define CONFIG 3
+
 // Number of bytes to encode struct StatusMessage
 #define BYTES_LENGTH_STATUS_MESSAGE 10
 
