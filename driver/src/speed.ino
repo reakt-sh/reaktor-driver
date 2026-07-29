@@ -68,7 +68,7 @@ void controlSpeed() {
     } else if (mode == DRIVE_FORWARD || mode == DRIVE_REVERSE) {
         if (targetRPM > 0) {
             if (currentRPM - targetRPM > DRIVER_BRAKING_OVERSHOOT_LIMIT_RPM) {
-                // Prevent spped overshoot over acceptable limits by activating braking behavior
+                // Prevent speed overshoot over acceptable limits by activating braking behavior
                 decelerationBraking = true;
             }
             if (decelerationBraking) {
