@@ -7,4 +7,5 @@
 #include <Arduino.h>
 
 const int DRIVER_REVOLUTION_SIGNAL_BLIND_TIME = 2; // Time in millis where interrupts are ignored because the signal might be fuzzy and result in multiple signal edges.
-const int DRIVER_BRAKING_THRESHOLD_RPM = 1000; // Threshold as difference between current and target speed (in RPM) at which the brakes will be engaged to further decelerate.
+const int DRIVER_BRAKING_DECELERATION_OFFSET_RPM = 5; // Offset in RPM for the deceleration braking behavior. If the negative difference between current and target speed (as absolute value) exceeds this offset, braking behavior will start.
+const int DRIVER_BRAKING_OVERSHOOT_LIMIT_RPM = 361; // Limit in RPM for the overshoot braking behavior. As soon as the actual speed is above this value over the target speed, braking behavior will start.
