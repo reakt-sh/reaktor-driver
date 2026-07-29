@@ -8,16 +8,27 @@
 
 
 // Driver board pin specifications
-const int BOARD_PIN_IN_MOTOR_METER = 2; // Pin for reading motor speed.
-const int BOARD_PIN_IN_MANUAL_THROTTLE = A0; // Pin for reading throttle lever position.
-const int BOARD_PIN_IN_DAC = A1; // Pin for reading output of DAC.
-const int BOARD_PIN_IN_ONBOARD_ENABLE_REMOTE_CONTROL = 7; // Pin for reading onboard switch for enabling remote control.
-const int BOARD_PIN_IN_MANUAL_FORWARD = 51; // Pin for reading manual forward switch.
-const int BOARD_PIN_IN_MANUAL_REVERSE = 47; // Pin for reading manual reverse switch.
-const int BOARD_PIN_OUT_MOTOR_FORWARD = 6; // Pin for engaging forward drive of the motor.
-const int BOARD_PIN_OUT_MOTOR_REVERSE = 5; // Pin for engaging reverse drive in the motor.
-const int BOARD_PIN_OUT_MOTOR_BRAKE = 4; // Pin for engaging brake of the motor.
-const int BOARD_PIN_OUT_MOTOR_REGENERATIVE = 3; // Pin for engaging regenerative braking of the motor.
+const uint8_t BOARD_PIN_IN_MOTOR_METER = 2; // Pin for reading motor speed.
+const uint8_t BOARD_PIN_IN_MANUAL_THROTTLE = A0; // Pin for reading throttle lever position.
+const uint8_t BOARD_PIN_IN_DAC = A1; // Pin for reading output of DAC.
+const uint8_t BOARD_PIN_IN_ONBOARD = 7; // Pin for reading onboard switch (currently not used).
+const uint8_t BOARD_PIN_IN_ENABLE_REMOTE_CONTROL = 22; // Pin for reading switch for enabling remote control.
+const uint8_t BOARD_PIN_IN_MANUAL_FORWARD = 24; // Pin for reading manual forward switch.
+const uint8_t BOARD_PIN_IN_MANUAL_REVERSE = 26; // Pin for reading manual reverse switch.
+const uint8_t BOARD_PIN_IN_PANEL_KNOB_ENC_A = 0; // Pin for reading panel knob movement encoded part A.
+const uint8_t BOARD_PIN_IN_PANEL_KNOB_ENC_B = 0; // Pin for reading panel knob movement encoded part B.
+const uint8_t BOARD_PIN_IN_PANEL_KNOB_PRESSED = 29; // Pin for reading panel knob pressed state.
+const uint8_t BOARD_PIN_OUT_MOTOR_FORWARD = 6; // Pin for engaging forward drive of the motor.
+const uint8_t BOARD_PIN_OUT_MOTOR_REVERSE = 5; // Pin for engaging reverse drive in the motor.
+const uint8_t BOARD_PIN_OUT_MOTOR_BRAKE = 4; // Pin for engaging brake of the motor.
+const uint8_t BOARD_PIN_OUT_MOTOR_REGENERATIVE = 3; // Pin for engaging regenerative braking of the motor.
+const uint8_t BOARD_PIN_OUT_PANEL_LED_RED = 27; // Pin for red channel of the LED on the control panel.
+const uint8_t BOARD_PIN_OUT_PANEL_LED_GREEN = 25; // Pin for green channel of the LED on the control panel.
+const uint8_t BOARD_PIN_OUT_PANEL_LED_BLUE = 23; // Pin for blue channel of the LED on the control panel.
+const uint8_t BOARD_PIN_OUT_PANEL_DISPLAY_SDO = 33; // Pin for SDO channel of the display on the control panel.
+const uint8_t BOARD_PIN_OUT_PANEL_DISPLAY_SDI = 35; // Pin for SDI channel of the display on the control panel.
+const uint8_t BOARD_PIN_OUT_PANEL_DISPLAY_SCL = 31; // Pin for SCL channel of the display on the control panel.
+const uint8_t BOARD_PIN_OUT_PANEL_DISPLAY_CS = 34; // Pin for CS channel of the display on the control panel.
 
 // Analog conversion specifications
 const float V_REF = 5.0; // Analog reference voltage.
