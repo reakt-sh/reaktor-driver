@@ -17,6 +17,7 @@ const int PID_SAMPLE_TIME = 25; // PID calculation interval in ms
 // Variables
 int targetRPM = 0;   // Target speed in RPM
 int appliedRPM = 0;  // Applied speed in RPM in last control cycle
+bool decelerationBraking = false; // Flag to indicate that the vehicle should brake for deceleration (target RPM was reduced or speed overshoot was detected)
 bool keepZero = true; // Keep speed at 0 RPM until first non-zero target is set
 
 // PID Controller
@@ -40,6 +41,10 @@ bool setupSpeedHandler() {
 }
 
 void setTargetRPM(int rpm) {
+    if (rpm < targetRPM) {
+        // Target speed was reduced, activate braking for deceleration
+        decelerationBraking = true;
+    }
     targetRPM = rpm;
 }
 
@@ -59,22 +64,37 @@ void controlSpeed() {
     if (mode == PARKING || mode == EMERGENCY_STOP) {
         // Always brake in parking or emergency stop mode
         setBrakeSignal(true);
+        decelerationBraking = false; // Reset deceleration braking flag, as we are braking anyway
     } else if (mode == DRIVE_FORWARD || mode == DRIVE_REVERSE) {
         if (targetRPM > 0) {
-            if (currentRPM - targetRPM > DRIVER_BRAKING_THRESHOLD_RPM) {
-                // Brake if targeted deceleration exceeds braking threshold
-                setBrakeSignal(true);
+            if (currentRPM - targetRPM > DRIVER_BRAKING_OVERSHOOT_LIMIT_RPM) {
+                // Prevent speed overshoot over acceptable limits by activating braking behavior
+                decelerationBraking = true;
+            }
+            if (decelerationBraking) {
+                if (targetRPM >= currentRPM || currentRPM - targetRPM <= DRIVER_BRAKING_DECELERATION_OFFSET_RPM) {
+                    // Braking no longer needed if target speed indicates acceleration
+                    // or difference to current speed is below the threshold
+                    setBrakeSignal(false);
+                    // Deactivate deceleration braking behavior
+                    decelerationBraking = false;
+                } else {
+                    // Apply brake based on speed difference
+                    // TODO: Implement analogous braking behavior as soon as supported by hardware
+                    setBrakeSignal(true);
+                }
             } else {
                 // Release brake in case no braking is needed or target speed is nearly reached
                 setBrakeSignal(false);
             }
         } else {
-            // Try to kep the vehicle at a standstill
+            // Try to keep the vehicle at a standstill
             setBrakeSignal(true);
         }
     } else {
         // In all other cases, release brake
         setBrakeSignal(false);
+        decelerationBraking = false; // Reset deceleration braking flag, as we are deliberatly not braking
     }
 
     // 2. Handle speed via pid controller

@@ -11,7 +11,8 @@
 
 bool setupSwitches() {
     // Configure digital IO pins
-    pinMode(BOARD_PIN_IN_ONBOARD_ENABLE_REMOTE_CONTROL, INPUT_PULLUP);
+    pinMode(BOARD_PIN_IN_ONBOARD, INPUT_PULLUP);
+    pinMode(BOARD_PIN_IN_ENABLE_REMOTE_CONTROL, INPUT_PULLUP);
     pinMode(BOARD_PIN_IN_MANUAL_FORWARD, INPUT_PULLUP);
     pinMode(BOARD_PIN_IN_MANUAL_REVERSE, INPUT_PULLUP);
     pinMode(BOARD_PIN_OUT_MOTOR_FORWARD, OUTPUT);
@@ -29,7 +30,7 @@ bool setupSwitches() {
 }
 
 bool isRemoteControlSwitchEngaged() {
-    return digitalRead(BOARD_PIN_IN_ONBOARD_ENABLE_REMOTE_CONTROL) == LOW;
+    return digitalRead(BOARD_PIN_IN_ENABLE_REMOTE_CONTROL) == LOW;
 }
 
 bool isManualForwardSwitchEngaged() {
