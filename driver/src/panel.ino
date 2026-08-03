@@ -161,9 +161,7 @@ void updatePanel() {
 
     // Current speed
     char speedTextBuffer[4];
-    bool speedRefresh = false;
     if (forceSpeedUpdate || millis() - displayLastUpdate >= DRIVER_PANEL_DISPLAY_SPEED_REFRESH_DELAY_MS) {
-        speedRefresh = true;
         displayLastUpdate = millis();
         int actualCurrentRPM = getCurrentRPM();
         if (actualCurrentRPM != displayStateCurrentSpeed) {
@@ -174,7 +172,7 @@ void updatePanel() {
     }
     // Target speed
     int actualTargetRPM = getTargetRPM();
-    if (actualTargetRPM != displayStateTargetSpeed && (remoteControl || (!remoteControl && speedRefresh))) {
+    if (actualTargetRPM != displayStateTargetSpeed) {
         displayStateTargetSpeed = actualTargetRPM;
         formatDisplaySpeed(speedTextBuffer, actualTargetRPM);
         setDisplayText(1, 7, speedTextBuffer, 4);

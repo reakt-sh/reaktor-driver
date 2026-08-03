@@ -17,3 +17,7 @@ driver_panel_display_speed_refresh_delay_ms:
   value: 100 # 10 fps
   c_type: int
   comment: "Delay in millis between speed value updates on the display. When the modes changes the value will be updated immediately."
+driver_throttle_reading_reaction_threshold_rpm:
+  value: 22 # 0.3 km/h
+  c_type: int
+  comment: "Threshold in RPM reacting to target speed changes read from the throttle leaver. If the difference between reading and current target speed (as absolute value) exceeds this threshold, the target speed will be updated. This only affects the manual control mode."
