@@ -13,3 +13,7 @@ driver_braking_overshoot_limit_rpm:
   value: 361 # 5 km/h
   c_type: int
   comment: "Limit in RPM for the overshoot braking behavior. As soon as the actual speed is above this value over the target speed, braking behavior will start."
+driver_panel_display_speed_refresh_delay_ms:
+  value: 100 # 10 fps
+  c_type: int
+  comment: "Delay in millis between speed value updates on the display. When the modes changes the value will be updated immediately."

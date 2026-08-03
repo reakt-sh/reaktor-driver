@@ -13,6 +13,7 @@
 #include "throttle.h"
 #include "speed.h"
 #include "switches.h"
+#include "panel.h"
 #include "mode.h"
 #include "error.h"
 
@@ -22,11 +23,12 @@
 void setup(void) {
     // Setup Handlers
     bool success = true;
-    success &= setupCommunication();
     success &= setupSwitches();
     success &= setupRevolutionsDetection();
     success &= setupThrottleHandler();
     success &= setupSpeedHandler();
+    success &= setupPanel();
+    success &= setupCommunication();
 
     // Handle fatal setup errors
     if (!success) {
@@ -79,6 +81,9 @@ void loop(void) {
 
         // Do sanity checks
         checkMotorThrottle();
+
+        // Update information on panel
+        updatePanel();
 
         // Send status report
         sendStatusReport(newControl);

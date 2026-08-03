@@ -15,6 +15,7 @@
 // Configuration
 const int PID_SAMPLE_TIME = 25; // PID calculation interval in ms
 // Variables
+int currentRPM = 0;   // Target speed in RPM
 int targetRPM = 0;   // Target speed in RPM
 int appliedRPM = 0;  // Applied speed in RPM in last control cycle
 bool decelerationBraking = false; // Flag to indicate that the vehicle should brake for deceleration (target RPM was reduced or speed overshoot was detected)
@@ -52,12 +53,16 @@ int getTargetRPM() {
     return targetRPM;
 }
 
+int getCurrentRPM() {
+    return currentRPM;
+}
+
 int getControlRPM() {
     return appliedRPM;
 }
 
 void controlSpeed() {
-    int currentRPM = getRevolutionsPerMinute();
+    currentRPM = getRevolutionsPerMinute();
     int mode = getCurrentMode();
 
     // 1. Handle braking
