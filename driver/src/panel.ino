@@ -143,7 +143,7 @@ void updatePanel() {
             setDisplayText(0, 0, "PRK", 3);
             break;
         case NEUTRAL:
-            setDisplayText(0, 0, "NUT", 3);
+            setDisplayText(0, 0, "NEU", 3);
             break;
         }
     }
