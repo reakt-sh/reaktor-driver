@@ -131,6 +131,7 @@ void updatePanel() {
                     errorTextBuffer[2] = ' ';
                 }
                 setDisplayText(1, 0, errorTextBuffer, 3);
+                displayStateControlSource = DISPLAY_STATE_CONTROL_ERROR;
             }
             break;
         case DRIVE_FORWARD:
