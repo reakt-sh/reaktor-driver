@@ -32,6 +32,7 @@ typedef uint8_t ErrorState; // 2bit
 
 typedef uint8_t ControlPayloadType; // 3bit
 
+// uint3 size to keep room for future types without changing message size
 #define HEARTBEAT 0
 // Used as a keep-alive message. No payload will follow.
 #define CONNECT 1
@@ -71,7 +72,7 @@ struct ErrorAppendixMessage {
 #define BYTES_LENGTH_CONTROL_ANNOUNCEMENT_MESSAGE 2
 
 struct ControlAnnouncementMessage {
-    // Acknowledge value that should be returned in the StatusMessage. Must be non-zero.
+    // Acknowledge value that should be returned in the StatusMessage. Must be non-zero to issue an acknowledgment.
     uint8_t acknowledge; // 8bit
     // The type of the following control message with the actual payload
     ControlPayloadType type; // 3bit
@@ -81,7 +82,7 @@ struct ControlAnnouncementMessage {
 #define BYTES_LENGTH_MOTOR_CONTROL_MESSAGE 3
 
 struct MotorControlMessage {
-    // Acknowledge value that should be returned in the StatusMessage. Must be non-zero.
+    // Acknowledge value that should be returned in the StatusMessage. Must be non-zero to issue an acknowledgment.
     uint8_t acknowledge; // 8bit
     Mode mode; // 3bit
     uint16_t target_rpm; // 13bit
@@ -91,7 +92,7 @@ struct MotorControlMessage {
 #define BYTES_LENGTH_CONNECTION_CONTROL_MESSAGE 3
 
 struct ConnectionControlMessage {
-    // Acknowledge value that should be returned in the StatusMessage. Must be non-zero.
+    // Acknowledge value that should be returned in the StatusMessage. Must be non-zero to issue an acknowledgment.
     uint8_t acknowledge; // 8bit
     uint16_t protocol_version; // 16bit
 };

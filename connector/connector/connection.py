@@ -113,7 +113,7 @@ class Connection:
         return self.current_status
 
     def add_status_listener(self, listener: Callable[[Status | ConnectionProblem], None]):
-        """Add a listener for status updates. Callback can be sync or async function."""
+        """Add a listener for status updates. Callback can be sync or async function. The pace of status updates is determined by control command responses and heartbeats. If you want to increase status updates send additional controls/heartbeats or switch to manual heartbeat mode."""
         self._listeners.append(listener)
 
     def get_problems(self) -> list[ConnectionProblem]:

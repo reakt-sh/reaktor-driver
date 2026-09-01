@@ -63,6 +63,7 @@ def bp_processor_ErrorState() -> bp.Processor:
 
 @unique
 class ControlPayloadType(IntEnum): # 3bit
+# uint3 size to keep room for future types without changing message size
     HEARTBEAT = 0
 # Used as a keep-alive message. No payload will follow.
     CONNECT = 1
@@ -71,6 +72,7 @@ class ControlPayloadType(IntEnum): # 3bit
 
 
 # Aliases for backwards compatibility
+# uint3 size to keep room for future types without changing message size
 HEARTBEAT: ControlPayloadType = ControlPayloadType.HEARTBEAT
 # Used as a keep-alive message. No payload will follow.
 CONNECT: ControlPayloadType = ControlPayloadType.CONNECT
@@ -285,7 +287,7 @@ class ControlAnnouncementMessage(bp.MessageBase):
     # Number of bytes to serialize class ControlAnnouncementMessage
     BYTES_LENGTH: ClassVar[int] = 2
 
-    # Acknowledge value that should be returned in the StatusMessage. Must be non-zero.
+    # Acknowledge value that should be returned in the StatusMessage. Must be non-zero to issue an acknowledgment.
     acknowledge: int = 0 # 8bit
     # The type of the following control message with the actual payload
     type: Union[int, ControlPayloadType] = ControlPayloadType.HEARTBEAT
@@ -361,7 +363,7 @@ class MotorControlMessage(bp.MessageBase):
     # Number of bytes to serialize class MotorControlMessage
     BYTES_LENGTH: ClassVar[int] = 3
 
-    # Acknowledge value that should be returned in the StatusMessage. Must be non-zero.
+    # Acknowledge value that should be returned in the StatusMessage. Must be non-zero to issue an acknowledgment.
     acknowledge: int = 0 # 8bit
     mode: Union[int, Mode] = Mode.DRIVE_MODE_NEUTRAL
     # This field is a proxy to hold integer value of enum field 'mode'
@@ -442,7 +444,7 @@ class ConnectionControlMessage(bp.MessageBase):
     # Number of bytes to serialize class ConnectionControlMessage
     BYTES_LENGTH: ClassVar[int] = 3
 
-    # Acknowledge value that should be returned in the StatusMessage. Must be non-zero.
+    # Acknowledge value that should be returned in the StatusMessage. Must be non-zero to issue an acknowledgment.
     acknowledge: int = 0 # 8bit
     protocol_version: int = 0 # 16bit
 

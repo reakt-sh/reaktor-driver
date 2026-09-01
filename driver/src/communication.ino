@@ -107,6 +107,7 @@ bool handleCommunication(bool remoteControlEnabled, tControlCommand* command) {
         // No message received in a while, disable remote control and issue emergency stop
         triggerEmergencyStop();
         registerError(ERROR_REMOTE_CONTROL_TIMEOUT);
+        sendStatusReport(true); // Might be futile but send a status report anyway
         isConnected = false; // Assume peer is gone
     }
 
@@ -116,7 +117,7 @@ bool handleCommunication(bool remoteControlEnabled, tControlCommand* command) {
 void sendStatusReport(bool force) {
     unsigned long spacing = millis() - lastStatusMessageTime;
     // Send status message if forced or enough time has passed since last message (ten times bigger interval if no peer is yet known)
-    if (force || controlAcknowledgement > 0 || (isConnected && spacing >= COMM_STATUS_MESSAGE_SPACING_TIME) || (!isConnected && spacing >= COMM_STATUS_MESSAGE_SPACING_TIME * 10)) {
+    if (force || controlAcknowledgement > 0 || spacing >= COMM_STATUS_MESSAGE_SPACING_TIME) {
         // Update status
         updateStatus();
 
