@@ -36,7 +36,7 @@ enum {
 tDriveMode displayStateDriveMode = NEUTRAL;
 int displayStateTargetSpeed = 0;
 int displayStateCurrentSpeed = 0;
-int displayLastUpdate = 0;
+unsigned long displayLastUpdate = 0;
 
 // ====================
 // API
@@ -193,7 +193,7 @@ void updatePanel() {
  */
 void setDisplayText(uint8_t row, uint8_t offset, const char* text, size_t length) {
     // Check if the row and offset are within valid bounds
-    if (row >= 0 && row < DISPLAY_ROWS && offset >= 0 && offset < DISPLAY_COLUMNS) {
+    if (row < DISPLAY_ROWS && offset < DISPLAY_COLUMNS) {
         uint8_t rowOffset = row * DISPLAY_ROW_TEXT_OFFSET;
         for (uint8_t idx = 0; idx < length && (offset + idx) < DISPLAY_COLUMNS; idx++) {
             // Send each character to the display
@@ -243,7 +243,7 @@ void sendByteToDisplay(uint8_t value, bool cmd) {
 
 /**
  * Formats the speed in RPM to a string representation in km/h.
- * Buffer must have 4 characters available (3 digits + comma + 1 digit after comma).
+ * Buffer must have 4 characters available (2 digits + comma + 1 digit after comma).
  *
  * @param buffer The character buffer to store the formatted speed (size 4).
  * @param rpm The speed in RPM.
