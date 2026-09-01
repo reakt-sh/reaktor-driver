@@ -5,17 +5,20 @@ Tests with a fixed speed.
 
 import logging
 import asyncio
-from context import Connection, Status, Control, Mode
+from test_context import Connection, Status, Control, Mode, ConnectionProblem
 
 TARGET_SPEED = 3  # Target speed in m/s
 
 # Status handling
 status = None
-def set_status(s: Status):
+def set_status(s: Status | ConnectionProblem):
     """Callback for new status messages."""
-    global status
-    status = s
-    print("New status: ", s)
+    if isinstance(s, ConnectionProblem):
+        print("Error: ", s)
+    else:
+        global status
+        status = s
+        print("New status: ", s)
 
 async def main():
     # Open connection
@@ -29,7 +32,7 @@ async def main():
         print("Warning: Connection not yet ready. Check connection.")
     while not status:
         print("Waiting for initial status...")
-        await asyncio.sleep(.1)
+        await asyncio.sleep(.2)
 
     # Test state
     while not status.remote_control:
