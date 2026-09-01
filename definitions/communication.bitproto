@@ -52,7 +52,7 @@ message ErrorAppendixMessage {
 }
 
 message ControlAnnouncementMessage {
-    // Acknowledge value that should be returned in the StatusMessage. Must be non-zero.
+    // Acknowledge value that should be returned in the StatusMessage. Must be non-zero to issue an acknowledgment.
     uint8 acknowledge = 1;
     // The type of the following control message with the actual payload
     ControlPayloadType type = 2;
@@ -61,7 +61,7 @@ message ControlAnnouncementMessage {
 }
 
 message MotorControlMessage {
-    // Acknowledge value that should be returned in the StatusMessage. Must be non-zero.
+    // Acknowledge value that should be returned in the StatusMessage. Must be non-zero to issue an acknowledgment.
     uint8 acknowledge = 1;
 
     Mode mode = 10;
@@ -69,7 +69,7 @@ message MotorControlMessage {
 }
 
 message ConnectionControlMessage {
-    // Acknowledge value that should be returned in the StatusMessage. Must be non-zero.
+    // Acknowledge value that should be returned in the StatusMessage. Must be non-zero to issue an acknowledgment.
     uint8 acknowledge = 1;
 
     uint16 protocol_version = 10;

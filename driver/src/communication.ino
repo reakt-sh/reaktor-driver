@@ -62,7 +62,7 @@ bool handleCommunication(bool remoteControlEnabled, tControlCommand* command) {
         messageBufferPosition++;
 
         // Process data
-        // Only process one message at a time, to ensure each message is acknowledged
+        // Only process one message at a time (matched cases must return), to ensure each message can be acknowledged
         switch (expectedMessage) {
             case ExpectedMessage::CONTROL_ANNOUNCEMENT_MESSAGE:
                 if (messageBufferPosition >= BYTES_LENGTH_CONTROL_ANNOUNCEMENT_MESSAGE) {

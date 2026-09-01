@@ -167,7 +167,7 @@ class MessageHandler:
             return 0
         # Announcement message
         pre_msg = ControlAnnouncementMessage(
-            acknowledge=self._get_next_acknowledgement_code(),
+            acknowledge=0, # No acknowledgement needed for announcement
             type=ControlPayloadType.CONNECT
         )
         logger.info("Sending control announcement message: %s", pre_msg.to_dict())
@@ -191,7 +191,7 @@ class MessageHandler:
             return False
         # Announcement message
         pre_msg = ControlAnnouncementMessage(
-            acknowledge=self._get_next_acknowledgement_code(),
+            acknowledge=0, # No acknowledgement needed for announcement
             type=ControlPayloadType.MOTOR
         )
         logger.info("Sending control announcement message: %s", pre_msg.to_dict())
@@ -200,6 +200,7 @@ class MessageHandler:
         # Actual control message
         rpm = floor(control.target_speed / MOTOR_SPEED_TRANSMISSION_FACTOR)
         msg = MotorControlMessage(
+            acknowledge=self._get_next_acknowledgement_code(),
             mode=control.mode,
             target_rpm=rpm
         )
