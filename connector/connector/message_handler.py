@@ -6,7 +6,7 @@ import asyncio
 from datetime import datetime
 from typing import Callable
 from math import floor
-from .data import Control, InternalState, Status
+from .data import ConnectionProblem, Control, InternalState, Status
 from .serial_connection_handler import SerialConnectionHandler
 from .generated.communication_bp import StatusMessage, ControlAnnouncementMessage, ConnectionControlMessage, MotorControlMessage, ErrorAppendixMessage, ErrorState, ControlPayloadType
 from .generated.config_communication import COMM_STATUS_MESSAGE_TIME_BITSIZE, COMM_MESSAGE_ACKNOWLEDGEMENT_CODE_BITSIZE, COMM_CONTROL_MESSAGE_ACKNOWLEDGEMENT_TIME, COMM_PROTOCOL_VERSION
@@ -21,18 +21,20 @@ class MessageHandler:
 
     _serial: SerialConnectionHandler # Internal serial connection handler
     _status_callback: Callable[[Status], None] # Callback for new status
+    _error_callback: Callable[[ConnectionProblem], None] # Callback for errors
     _worker: asyncio.Task # Background worker task for processing messages
     _next_acknowledgement_code: int # Counter for acknowledgement code
     _unacknowledged_codes: dict[int, datetime] # Set of currently outstanding acknowledgement codes
 
-    def __init__(self, serial: SerialConnectionHandler, callback: Callable[[Status], None]):
+    def __init__(self, serial: SerialConnectionHandler, status_callback: Callable[[Status], None], error_callback: Callable[[ConnectionProblem], None]):
         self._serial = serial
-        self._status_callback = callback
+        self._status_callback = status_callback
+        self._error_callback = error_callback
         self._worker = None
         self._next_acknowledgement_code = 1
         self._unacknowledged_codes = {}
 
-    async def _decoder_loop(self, notifier: asyncio.Future) -> None:
+    async def _decoder_loop(self, notifier: asyncio.Future[bool]) -> None:
         """Background task to decode incoming status messages."""
         try:
             last_status_msg: StatusMessage = None
@@ -50,6 +52,10 @@ class MessageHandler:
                     logger.debug("Decoded status message: %s", status_msg.to_dict())
                 except Exception as e:
                     logger.error("Failed to decode status message: %s", e)
+                    self._error_callback(ConnectionProblem("Failed to decode status message", cause=e))
+                    if not notified:
+                        notifier.set_result(False)
+                        return
                     continue
                 # Read error appendix if needed
                 status_errors = []
@@ -69,6 +75,10 @@ class MessageHandler:
                             error_code_mask <<= 1
                     except Exception as e:
                         logger.error("Failed to decode error appendix message: %s", e)
+                        self._error_callback(ConnectionProblem("Failed to decode error appendix message", cause=e))
+                        if not notified:
+                            notifier.set_result(False)
+                            return
                         continue
                 # Handle acknowledgement code
                 if status_msg.control_acknowledgement > 0:
@@ -83,6 +93,10 @@ class MessageHandler:
                             notified = True
                     elif status_msg.control_acknowledgement == connect_pending_ack:
                         logger.error("Connection handshake with driver failed. Check protocol compatibility.")
+                        self._error_callback(ConnectionProblem("Connection handshake with driver failed. Check protocol compatibility."))
+                        if not notified:
+                            notifier.set_result(False)
+                            return
                         connect_pending_ack = -1
                 elif not status_msg.connection_established:
                     if notified:
@@ -139,7 +153,7 @@ class MessageHandler:
         if code in self._unacknowledged_codes:
             if (datetime.now() - self._unacknowledged_codes[code]).total_seconds() * 1000 > COMM_CONTROL_MESSAGE_ACKNOWLEDGEMENT_TIME:
                 logger.error("Acknowledgement timeout. Code: %d. Sent: %s. Received: %s", code, self._unacknowledged_codes[code], datetime.now())
-                # TODO Raise problem further
+                self._error_callback(ConnectionProblem("Acknowledgement timeout"))
             else:
                 logger.debug("Received acknowledgement for code: %d", code)
             del self._unacknowledged_codes[code]
@@ -206,18 +220,28 @@ class MessageHandler:
         self._serial.send(msg.encode())
         return True
 
-    async def start_processing(self):
-        """Start decoding incoming messages. Will return once the initial message is received but will continue afterwards."""
+    async def start_processing(self) -> bool:
+        """Start decoding incoming messages. Will return once the initial message is received but will continue afterwards. Returns True if the connection was successfully established, False otherwise."""
         if not self._worker:
             notifier = asyncio.get_running_loop().create_future()
             self._worker = asyncio.create_task(self._decoder_loop(notifier))
             try:
                 await notifier
+                if notifier.result():
+                    logger.info("Decoder loop started successfully")
+                    return True
+                else:
+                    logger.error("Decoder loop failed to start")
+                    self._worker.cancel()
+                    self._worker = None
             except asyncio.CancelledError:
                 logger.info("Decoder loop stopped before connection was established")
         else:
             logger.warning("Decoder loop already running")
+        return False
 
     def shutdown(self):
         """Stop decoding incoming messages."""
-        self._worker.cancel()
+        if self._worker:
+            self._worker.cancel()
+            self._worker = None
