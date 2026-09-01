@@ -56,3 +56,9 @@ bool hasFatalError();
  * Transient errors will be removed afterwards.
  */
 uint64_t consumeErrors();
+
+/**
+ * Returns the bitvector of all registered errors without consuming them.
+ * Each bit corresponds to an error code (1 << error_code).
+ */
+uint64_t getErrors();
