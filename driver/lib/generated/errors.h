@@ -8,7 +8,7 @@
 #include <Arduino.h>
 
 const int ERROR_COMM_CONNECTION_VERSION_MISMATCH = 0;
-const char* ERROR_COMM_CONNECTION_VERSION_MISMATCH_MESSAGE = "Connection refuesed due to protocol version mismatch between driver and remote control.";
+const char* ERROR_COMM_CONNECTION_VERSION_MISMATCH_MESSAGE = "Connection refused due to protocol version mismatch between driver and remote control.";
 const int ERROR_COMM_CONNECTION_NOT_ESTABLISHED = 1;
 const char* ERROR_COMM_CONNECTION_NOT_ESTABLISHED_MESSAGE = "A control message was received without a successful connection handshake beforehand.";
 const int ERROR_REMOTE_CONTROL_TIMEOUT = 2;
@@ -20,7 +20,7 @@ const char* ERROR_CONTROL_MODE_SWITCH_UNSAFE_MESSAGE = "Control mode switch atte
 
 // Mapping of error codes to human-readable messages.
 const char* ERROR_MAP[] = {
-   "Connection refuesed due to protocol version mismatch between driver and remote control.",
+   "Connection refused due to protocol version mismatch between driver and remote control.",
    "A control message was received without a successful connection handshake beforehand.",
    "While in active remote control mode, no control (or heartbeat) message was received in the expected interval.",
    "No connection to motor throttle control component (DAC via I2C).",

@@ -5,7 +5,7 @@
 # Error codes will encoded in a one-hot bit-vector and should be continuous.
 
 ERROR_COMM_CONNECTION_VERSION_MISMATCH = 0
-ERROR_COMM_CONNECTION_VERSION_MISMATCH_MESSAGE = "Connection refuesed due to protocol version mismatch between driver and remote control."
+ERROR_COMM_CONNECTION_VERSION_MISMATCH_MESSAGE = "Connection refused due to protocol version mismatch between driver and remote control."
 ERROR_COMM_CONNECTION_NOT_ESTABLISHED = 1
 ERROR_COMM_CONNECTION_NOT_ESTABLISHED_MESSAGE = "A control message was received without a successful connection handshake beforehand."
 ERROR_REMOTE_CONTROL_TIMEOUT = 2
@@ -17,7 +17,7 @@ ERROR_CONTROL_MODE_SWITCH_UNSAFE_MESSAGE = "Control mode switch attempted while 
 
 # Mapping of error codes to human-readable messages.
 ERROR_MAP = {
-    0: "Connection refuesed due to protocol version mismatch between driver and remote control.",
+    0: "Connection refused due to protocol version mismatch between driver and remote control.",
     1: "A control message was received without a successful connection handshake beforehand.",
     2: "While in active remote control mode, no control (or heartbeat) message was received in the expected interval.",
     3: "No connection to motor throttle control component (DAC via I2C).",
