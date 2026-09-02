@@ -149,7 +149,7 @@ class MessageHandler:
         return code
 
     def _handle_received_acknowledgement_code(self, code: int):
-        """Processs and free the received acknowledgement code."""
+        """Process and free the received acknowledgement code."""
         if code in self._unacknowledged_codes:
             if (datetime.now() - self._unacknowledged_codes[code]).total_seconds() * 1000 > COMM_CONTROL_MESSAGE_ACKNOWLEDGEMENT_TIME:
                 logger.error("Acknowledgement timeout. Code: %d. Sent: %s. Received: %s", code, self._unacknowledged_codes[code], datetime.now())

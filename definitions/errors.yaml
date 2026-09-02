@@ -8,7 +8,7 @@ _doc_: [
 
 # Errors:
 error_comm_connection_version_mismatch: 0
-error_comm_connection_version_mismatch_message: "Connection refuesed due to protocol version mismatch between driver and remote control."
+error_comm_connection_version_mismatch_message: "Connection refused due to protocol version mismatch between driver and remote control."
 error_comm_connection_not_established: 1
 error_comm_connection_not_established_message: "A control message was received without a successful connection handshake beforehand."
 error_remote_control_timeout: 2

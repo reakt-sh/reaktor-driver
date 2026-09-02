@@ -57,7 +57,7 @@ message ControlAnnouncementMessage {
     // The type of the following control message with the actual payload
     ControlPayloadType type = 2;
 
-    // Note that this message should not change, otherwise a failed connection handshare due to incompatibel protocol versions cannot be correctly detected.
+    // Note that this message should not change, otherwise a failed connection handshake due to incompatible protocol versions cannot be correctly detected.
 }
 
 message MotorControlMessage {

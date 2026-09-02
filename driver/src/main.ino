@@ -45,7 +45,7 @@ tControlCommand remoteControl;
 
 void loop(void) {
     if (hasFatalError()) {
-        // In case of fatal error keep in save state
+        // In case of fatal error keep in safe state
         triggerEmergencyStop();
         // Handle basic communication to allow error reporting
         handleCommunication(false, &remoteControl);

@@ -20,7 +20,7 @@ comm_status_message_time_bitsize: # Must match the size in communication.bitprot
 comm_status_message_spacing_time:
   value: 1000
   c_type: unsigned int
-  comment: "Time between two status messages in ms (unless issued otherwise, e.g. forced response or acknowledgement of an heartbeat)."
+  comment: "Time between two status messages in ms (unless issued otherwise, e.g. forced response or acknowledgement of a heartbeat)."
 comm_control_message_heartbeat_time:
   value: 200
   c_type: unsigned int
