@@ -13,7 +13,7 @@
 #include "error.h"
 
 // Variables
-bool isConnected = false; // Indicates if a remote peer has been detected
+bool isConnected = false; // Indicates that a remote peer conducted a successful handshake and is still alive
 unsigned long lastStatusMessageTime = 0; // Timestamp of the last sent status message
 unsigned long lastControlMessageTime = 0; // Timestamp of the last received control message
 unsigned int controlAcknowledgement = 0; // Acknowledgement code of last control message
@@ -116,7 +116,7 @@ bool handleCommunication(bool remoteControlEnabled, tControlCommand* command) {
 
 void sendStatusReport(bool force) {
     unsigned long spacing = millis() - lastStatusMessageTime;
-    // Send status message if forced or enough time has passed since last message (ten times bigger interval if no peer is yet known)
+    // Send status message if forced, an incoming messsage needs to be acknowledged, or a status update is required due to default time
     if (force || controlAcknowledgement > 0 || spacing >= COMM_STATUS_MESSAGE_SPACING_TIME) {
         // Update status
         updateStatus();

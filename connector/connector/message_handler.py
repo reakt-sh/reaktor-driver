@@ -145,7 +145,7 @@ class MessageHandler:
         if self._next_acknowledgement_code > (1 << COMM_MESSAGE_ACKNOWLEDGEMENT_CODE_BITSIZE) - 1:
             self._next_acknowledgement_code = 1
         if self._next_acknowledgement_code in self._unacknowledged_codes.keys():
-            raise Exception(f"Too many unacknowledged messages pending ({len(self._unacknowledged_codes)}). Cannot send new message, no free acknowledgement codes available.")
+            raise Exception(f"Too many unacknowledged messages pending ({len(self._unacknowledged_codes)}). Cannot send new message, no free consecutive acknowledgement code available.")
         return code
 
     def _handle_received_acknowledgement_code(self, code: int):
