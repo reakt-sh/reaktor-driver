@@ -78,7 +78,7 @@ class Connection:
             last_msg_time = datetime.now()
             while True:
                 if self._serial and self._serial.is_ready():
-                    logger.info("Automatic heartbeat (%d ms delay).", (datetime.now() - last_msg_time).total_seconds() * 1000)
+                    logger.debug("Automatic heartbeat (%d ms delay).", (datetime.now() - last_msg_time).total_seconds() * 1000)
                     self._decoder.send_heartbeat()
                     last_msg_time = datetime.now()
                 await asyncio.sleep(sleep_time)

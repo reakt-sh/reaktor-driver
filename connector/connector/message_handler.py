@@ -155,7 +155,7 @@ class MessageHandler:
                 logger.error("Acknowledgement timeout. Code: %d. Sent: %s. Received: %s", code, self._unacknowledged_codes[code], datetime.now())
                 self._error_callback(ConnectionProblem("Acknowledgement timeout"))
             else:
-                logger.debug("Received acknowledgement for code: %d", code)
+                logger.debug("Received acknowledgement for code: %d after %d ms", code, (datetime.now() - self._unacknowledged_codes[code]).total_seconds() * 1000)
             del self._unacknowledged_codes[code]
         else:
             logger.warning("Received unknown acknowledgement code: %d", code)
