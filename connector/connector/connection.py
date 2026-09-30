@@ -1,9 +1,10 @@
 """
-User-facing connectoion for managing communication with the vehicle.
+User-facing connection for managing communication with the vehicle.
 """
 
 import logging
 import asyncio
+from datetime import datetime
 from typing import Callable
 from inspect import iscoroutinefunction
 from serial_asyncio import create_serial_connection
@@ -73,10 +74,14 @@ class Connection:
     async def _heartbeat_loop(self):
         """Background task to send periodic heartbeat messages."""
         try:
+            sleep_time = (COMM_CONTROL_MESSAGE_HEARTBEAT_TIME / 1000) / 2 # Half heartbeat interval
+            last_msg_time = datetime.now()
             while True:
                 if self._serial and self._serial.is_ready():
+                    logger.info("Automatic heartbeat (%d ms delay).", (datetime.now() - last_msg_time).total_seconds() * 1000)
                     self._decoder.send_heartbeat()
-                await asyncio.sleep((COMM_CONTROL_MESSAGE_HEARTBEAT_TIME / 1000) / 2 ) # Half heartbeat interval
+                    last_msg_time = datetime.now()
+                await asyncio.sleep(sleep_time)
         except asyncio.CancelledError:
             logger.info("Heartbeat loop cancelled")
 
