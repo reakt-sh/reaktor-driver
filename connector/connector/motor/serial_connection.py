@@ -1,15 +1,15 @@
 """
-INTERNAL serial connection handler.
+INTERNAL serial connection to the motor controller board.
 """
 
 import asyncio
 from serial_asyncio import SerialTransport
-from . import CONNECTOR_ROOT_LOGGER
+from . import MOTOR_ROOT_LOGGER
 
-logger = CONNECTOR_ROOT_LOGGER.getChild("internal.serial")
+logger = MOTOR_ROOT_LOGGER.getChild("internal.serial")
 
-class SerialConnectionHandler(asyncio.Protocol):
-    """Internal serial connection to the REAKTOR driver."""
+class MotorSerialConnection(asyncio.Protocol):
+    """Internal serial connection to the motor controller board."""
     _transport: SerialTransport # Low-level serial transport handler
     _buffer: bytearray # Buffer queue for incoming data
     _consumer: asyncio.Future # Consumer waiting for data
@@ -30,7 +30,7 @@ class SerialConnectionHandler(asyncio.Protocol):
         logger.error("Serial connection lost")
 
     def data_received(self, data):
-        logger.debug("Serial data received: %s", data.hex())
+        logger.debug("Serial data received: %s", data.hex(" "))
         self._buffer.extend(data)
         if self._consumer and not self._consumer.done():
             self._consumer.set_result(True)
@@ -55,7 +55,7 @@ class SerialConnectionHandler(asyncio.Protocol):
         if not self._transport:
             logger.error("Cannot send data: serial connection not yet established")
             return
-        logger.debug("Sending data: %s", data.hex())
+        logger.debug("Sending data: %s", data.hex(" "))
         self._transport.write(data)
 
     def is_ready(self) -> bool:

@@ -5,7 +5,8 @@ import logging
 
 CONNECTOR_ROOT_LOGGER = logging.getLogger("connector")
 
-from .connection import Connection
-from .data import Control, Status, Mode, ErrorState, InternalState, ConnectionProblem
+from .errors import ConnectionProblem
+from .motor.connection import MotorConnection
+from .motor.data import Control, Status, Mode, ErrorState, InternalState
 
-__all__ = ["Connection", "Control", "Status", "Mode", "ErrorState", "InternalState", "ConnectionProblem"]
+__all__ = ["MotorConnection", "Control", "Status", "Mode", "ErrorState", "InternalState", "ConnectionProblem",]

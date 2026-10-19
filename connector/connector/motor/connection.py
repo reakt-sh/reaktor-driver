@@ -1,26 +1,26 @@
 """
-User-facing connection for managing communication with the vehicle.
+User-facing connection for managing communication with the motor controller.
 """
 
-import logging
 import asyncio
 from datetime import datetime
 from typing import Callable
 from inspect import iscoroutinefunction
 from serial_asyncio import create_serial_connection
-from .generated.config_communication import COMM_SERIAL_BAUDRATE, COMM_CONTROL_MESSAGE_HEARTBEAT_TIME
-from .serial_connection_handler import SerialConnectionHandler
-from .message_handler import MessageHandler
-from .data import ConnectionProblem, Control, Status
-from . import CONNECTOR_ROOT_LOGGER
+from ..generated.config_communication import COMM_SERIAL_BAUDRATE, COMM_CONTROL_MESSAGE_HEARTBEAT_TIME
+from ..errors import ConnectionProblem
+from .serial_connection import MotorSerialConnection
+from .protocol import MotorProtocol
+from .data import Control, Status
+from . import MOTOR_ROOT_LOGGER
 
-logger = CONNECTOR_ROOT_LOGGER.getChild("connection")
+logger = MOTOR_ROOT_LOGGER.getChild("connection")
 
-class Connection:
-    """Connection to the REAKTOR."""
+class MotorConnection:
+    """Connection to the motor controller."""
 
-    _serial: SerialConnectionHandler # Internal serial connection handler
-    _decoder: MessageHandler # Message handler for en/decoding messages
+    _serial: MotorSerialConnection # Internal serial connection handler
+    _decoder: MotorProtocol # Message handler for en/decoding messages
     _heartbeat_task: asyncio.Task # Background task for automatic heartbeat
     _listeners: list[Callable[[Status], None]] # Listeners for status updates
     _listener_futures: list[asyncio.Future] # Futures for one-time status listeners
@@ -93,9 +93,9 @@ class Connection:
             logger.warning("Connection already opened")
             return
         # Create serial connection
-        _, protocol = await create_serial_connection(asyncio.get_event_loop(), SerialConnectionHandler, port, baudrate=COMM_SERIAL_BAUDRATE)
-        self._serial = protocol
-        self._decoder = MessageHandler(protocol, self._handle_status, self._handle_error)
+        _, connection = await create_serial_connection(asyncio.get_event_loop(), MotorSerialConnection, port, baudrate=COMM_SERIAL_BAUDRATE)
+        self._serial = connection
+        self._decoder = MotorProtocol(connection, self._handle_status, self._handle_error)
         # Wait until the connection is fully established (driver indicates connected)
         if await self._decoder.start_processing():
             self._opened = True
@@ -146,9 +146,3 @@ class Connection:
         if self._serial:
             self._serial.close()
 
-    def activate_file_logging(self, file_path: str, level: int = logging.WARNING):
-        """Activate logging to a file."""
-        file_handler = logging.FileHandler(file_path)
-        file_handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
-        CONNECTOR_ROOT_LOGGER.addHandler(file_handler)
-        CONNECTOR_ROOT_LOGGER.setLevel(level)
