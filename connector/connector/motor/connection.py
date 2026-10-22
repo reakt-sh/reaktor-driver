@@ -122,8 +122,12 @@ class MotorConnection:
         self._listeners.append(listener)
 
     def get_problems(self) -> list[ConnectionProblem]:
-        """Get the (mutable) list of connection problems."""
-        return self._problems
+        """Get the list of connection problems."""
+        return self._problems[:]
+
+    def clear_problems(self):
+        """Clear the list of connection problems."""
+        self._problems.clear()
 
     def send_control(self, control: Control) -> bool:
         """Send a control command."""
