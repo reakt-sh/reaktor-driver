@@ -9,7 +9,7 @@ from inspect import iscoroutinefunction
 from serial_asyncio import create_serial_connection
 from ..generated.config_communication import COMM_SERIAL_BAUDRATE, COMM_CONTROL_MESSAGE_HEARTBEAT_TIME
 from ..errors import ConnectionProblem
-from .serial_connection import MotorSerialConnection
+from ..util import SerialConnection
 from .protocol import MotorProtocol
 from .data import Control, Status
 from . import MOTOR_ROOT_LOGGER
@@ -19,7 +19,7 @@ logger = MOTOR_ROOT_LOGGER.getChild("connection")
 class MotorConnection:
     """Connection to the motor controller."""
 
-    _serial: MotorSerialConnection # Internal serial connection handler
+    _serial: SerialConnection # Internal serial connection handler
     _decoder: MotorProtocol # Message handler for en/decoding messages
     _heartbeat_task: asyncio.Task # Background task for automatic heartbeat
     _listeners: list[Callable[[Status], None]] # Listeners for status updates
@@ -93,7 +93,13 @@ class MotorConnection:
             logger.warning("Connection already opened")
             return
         # Create serial connection
-        _, connection = await create_serial_connection(asyncio.get_event_loop(), MotorSerialConnection, port, baudrate=COMM_SERIAL_BAUDRATE)
+        _, connection = await create_serial_connection(
+            asyncio.get_event_loop(),
+            SerialConnection,
+            port,
+            baudrate=COMM_SERIAL_BAUDRATE
+        )
+        connection.complete_init(identifier=port, error_callback=self._handle_error)
         self._serial = connection
         self._decoder = MotorProtocol(connection, self._handle_status, self._handle_error)
         # Wait until the connection is fully established (driver indicates connected)
@@ -145,8 +151,13 @@ class MotorConnection:
 
     def close(self):
         """Close the connection."""
-        if self._heartbeat_task:
-            self._heartbeat_task.cancel()
+        if self._decoder:
+            self._decoder.shutdown()
+            self._decoder = None
         if self._serial:
             self._serial.close()
+            self._serial = None
+        if self._heartbeat_task:
+            self._heartbeat_task.cancel()
+            self._heartbeat_task = None
 

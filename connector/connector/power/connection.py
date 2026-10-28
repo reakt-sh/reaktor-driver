@@ -1,5 +1,5 @@
 """
-User-facing connection for managing communication with the REAKTOR motor controller.
+User-facing connection for managing communication with the power meter.
 """
 
 import asyncio
@@ -10,7 +10,7 @@ from serial_asyncio import create_serial_connection
 
 from ..errors import ConnectionProblem
 from .data import PowerConsumption
-from .serial_connection import PowerSensorSerialConnection
+from ..util import SerialConnection
 from .protocol import PowerSensorProtocol
 from .config import POWER_METER_BAUDRATE, POWER_METER_BYTESIZE, POWER_METER_PARITY, POWER_METER_STOPBITS, POWER_METER_TIMEOUT
 from . import POWER_ROOT_LOGGER
@@ -20,7 +20,7 @@ logger = POWER_ROOT_LOGGER.getChild("connection")
 class PowerSensorConnection:
     """Connection to the power sensor."""
 
-    _serial: PowerSensorSerialConnection # Internal serial connection handler
+    _serial: SerialConnection # Internal serial connection handler
     _decoder: PowerSensorProtocol # Message handler for en/decoding messages
     _polling_task: asyncio.Task # Background task for automatic data polling
     _listeners: list[Callable[[PowerConsumption], None]] # Listeners for data updates
@@ -86,10 +86,10 @@ class PowerSensorConnection:
             last_poll = datetime.now()
             last_start = datetime.now()
             while True:
-                if self._serial and self._serial.is_ready():
+                if self.is_ready():
                     logger.debug("Automatic data poll (%d ms delay, %d ms waiting).", (datetime.now() - last_poll).total_seconds() * 1000, (last_poll - last_start).total_seconds() * 1000)
                     last_start = datetime.now()
-                    self.request_data()
+                    self.request_data() # Send request to the power sensor
                     try:
                         await asyncio.wait_for(self.get_next_data(), timeout=POWER_METER_TIMEOUT)
                     except TimeoutError:
@@ -104,7 +104,7 @@ class PowerSensorConnection:
                             self.close()
                             # Restore task
                             self._polling_task = my_task
-                            # Attempt to reopen connection
+                            # Reopen connection
                             await self.open(current_port)
                     last_poll = datetime.now()
                 await asyncio.sleep(sleep_time)
@@ -121,7 +121,7 @@ class PowerSensorConnection:
         # Create serial connection
         _, connection = await create_serial_connection(
             asyncio.get_event_loop(),
-            PowerSensorSerialConnection,
+            SerialConnection,
             port,
             baudrate=POWER_METER_BAUDRATE,
             bytesize=POWER_METER_BYTESIZE,
@@ -129,10 +129,11 @@ class PowerSensorConnection:
             stopbits=POWER_METER_STOPBITS,
             timeout=POWER_METER_TIMEOUT,
         )
+        connection.complete_init(identifier=port, error_callback=self._handle_error)
         self._serial = connection
         self._decoder = PowerSensorProtocol(connection, self._handle_data, self._handle_error)
         self._decoder.start_processing()
-        logger.info("Communication established on port %s", port)
+        logger.info("Connection created for port %s", port)
         if self._poll and not self._polling_task:
             self._polling_task = asyncio.create_task(self._polling_loop())
 
@@ -177,12 +178,12 @@ class PowerSensorConnection:
 
     def close(self):
         """Close the connection."""
-        if self._serial:
-            self._serial.close()
-            self._serial = None
         if self._decoder:
             self._decoder.shutdown()
             self._decoder = None
+        if self._serial:
+            self._serial.close()
+            self._serial = None
         if self._polling_task:
             self._polling_task.cancel()
             self._polling_task = None

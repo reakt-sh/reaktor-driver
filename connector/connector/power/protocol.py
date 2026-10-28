@@ -7,7 +7,8 @@ from datetime import datetime
 from typing import Callable
 from ..errors import ConnectionProblem
 from .data import PowerConsumption
-from .serial_connection import PowerSensorSerialConnection
+from ..util import SerialConnection
+from .config import MESSAGE_BYTES
 from . import POWER_ROOT_LOGGER
 
 logger = POWER_ROOT_LOGGER.getChild("internal.messages")
@@ -15,13 +16,13 @@ logger = POWER_ROOT_LOGGER.getChild("internal.messages")
 class PowerSensorProtocol:
     """Handler for encoding and decoding messages to/from the power sensor."""
 
-    _serial: PowerSensorSerialConnection # Internal serial connection handler
+    _serial: SerialConnection # Internal serial connection handler
     _data_callback: Callable[[PowerConsumption], None] # Callback for new status
     _error_callback: Callable[[ConnectionProblem], None] # Callback for errors
     _worker: asyncio.Task # Background worker task for processing messages
     _acknowledge_code: int # Acknowledgment code for the request (aka slave ID)
 
-    def __init__(self, serial: PowerSensorSerialConnection, data_callback: Callable[[PowerConsumption], None], error_callback: Callable[[ConnectionProblem], None]):
+    def __init__(self, serial: SerialConnection, data_callback: Callable[[PowerConsumption], None], error_callback: Callable[[ConnectionProblem], None]):
         self._serial = serial
         self._data_callback = data_callback
         self._error_callback = error_callback
@@ -32,58 +33,51 @@ class PowerSensorProtocol:
         """Background task to decode incoming data."""
         try:
             while True:
-                # FIXME Move to config
-                BYTES = 21
                 # Read status message bytes form serial
-                input_data = await self._serial.consume(BYTES)
+                input_data = await self._serial.consume(MESSAGE_BYTES)
                 logger.debug("Received power consumption data: %s", input_data.hex(" "))
                 # Validate
-                if len(input_data) < BYTES:
+                if len(input_data) < MESSAGE_BYTES:
                     logger.warning("Response too short: %d bytes", len(input_data))
                     continue
                 # Decode data
                 received_crc = input_data[-2:]
                 calculated_crc = self._modbus_crc(input_data[:-2])
-
+                # Check CRC
                 if received_crc != calculated_crc:
                     logger.warning("CRC mismatch: got %s, expected %s", received_crc.hex(' '), calculated_crc.hex(' '))
                     continue
-
+                # Validate response
                 if input_data[0] != self._acknowledge_code:
                     logger.warning("Wrong acknowlage code: %s", input_data[0])
                     continue
                 if input_data[1] & 0x80:
                     logger.warning("Modbus exception: %s", input_data.hex(' '))
                     continue
-
                 if input_data[1] != 0x04:
                     logger.warning("Unexpected function code: %02x", input_data[1])
                     continue
-
+                # Decode data
                 byte_count = input_data[2]
                 if byte_count != 16:
                     logger.warning("Unexpected byte count: %d", byte_count)
                     continue
-
                 data = input_data[3:3 + byte_count]
                 registers = []
                 for i in range(0, len(data), 2):
                     registers.append(int.from_bytes(data[i:i + 2], byteorder="big"))
-
+                # Convert data
                 voltage_v = registers[0] / 100.0
                 current_a = registers[1] / 100.0
-
                 # PZEM-017: 32-bit values are transmitted as low word first, then high word.
                 power_raw = (registers[3] << 16) | registers[2]
                 energy_raw = (registers[5] << 16) | registers[4]
-
                 power_w = power_raw / 10.0
                 energy_wh = energy_raw
-
                 high_voltage_alarm = registers[6] == 0xFFFF
                 low_voltage_alarm = registers[7] == 0xFFFF
 
-                # Create and validate via pydantic
+                # Create record and validate via pydantic
                 new_data = PowerConsumption(
                     time=datetime.now(),
                     voltage=voltage_v,
@@ -98,8 +92,6 @@ class PowerSensorProtocol:
                 self._data_callback(new_data)
         except asyncio.CancelledError:
             logger.info("Decoder loop stopped")
-        except asyncio.QueueShutDown:
-            logger.info("SerialConnectionHandler shutdown detected, stopping decoder loop")
 
     def _modbus_crc(self, data: bytes) -> bytes:
         """Calculate the Modbus CRC16 for the given data."""

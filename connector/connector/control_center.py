@@ -10,7 +10,7 @@ from datetime import datetime
 from aiofiles.threadpool.text import AsyncTextIOWrapper
 
 from connector.power.connection import PowerSensorConnection
-from .util.device_helper import get_serial_ports
+from .util.device_helper import get_serial_ports, SerialPorts
 from .motor.connection import MotorConnection
 from .errors import ConnectionProblem
 from .motor.data import Status
@@ -26,9 +26,11 @@ class ControlCenter:
     _data_storage: AsyncTextIOWrapper # File handle for data storage
     _motor_connection: MotorConnection # Connection to the REAKTOR
     _power_connection: PowerSensorConnection # Connection to the power sensor
+    _ports: SerialPorts # Serial ports for motor and power sensor
 
     def __init__(self, storage_dir: str = ".", log_level: int = logging.WARNING, power_sensor_poll_delay_ms: int = 0):
         logger.debug("New ControlCenter instance created.")
+        self._ports = None
         # Motor Connection
         self._motor_connection = MotorConnection()
         self._motor_connection.add_status_listener(self._handle_status)
@@ -77,13 +79,28 @@ class ControlCenter:
         self._data_storage = await aiofiles.open(join(self._storage_folder, f"{self._session}.json"), "w", encoding="utf-8")
         await self._data_storage.write("[\n")  # Start of JSON array
         # Devices
-        ports = await get_serial_ports()
+        self._ports = await get_serial_ports()
         # Open connection to driver
-        logger.debug("Opening connection to REAKTOR motor driver on port %s", ports.motor)
-        await self._motor_connection.open(ports.motor)
+        logger.debug("Opening connection to REAKTOR motor driver on port %s", self._ports.motor)
+        await self._motor_connection.open(self._ports.motor)
         # Open connection to power meter
-        logger.debug("Opening connection to REAKTOR power meter on port %s", ports.power)
-        await self._power_connection.open(ports.power)
+        logger.debug("Opening connection to REAKTOR power meter on port %s", self._ports.power)
+        await self._power_connection.open(self._ports.power)
+
+    async def reconnect(self):
+        """Issue a reconnecto on all devices."""
+        if not self._ports:
+            logger.error("Cannot reconnect: Not started yet.")
+            return
+        logger.debug("Reconnecting.")
+        # Close connections
+        self._motor_connection.close()
+        self._power_connection.close()
+        # Reopen connections
+        logger.debug("Reopening connection to motor driver on port %s", self._ports.motor)
+        await self._motor_connection.open(self._ports.motor)
+        logger.debug("Reopening connection to power meter on port %s", self._ports.power)
+        await self._power_connection.open(self._ports.power)
 
     async def stop(self):
         """Stop the observation system."""
