@@ -22,6 +22,7 @@ class PowerSensorConnection:
 
     _serial: SerialConnection # Internal serial connection handler
     _decoder: PowerSensorProtocol # Message handler for en/decoding messages
+    _current_port: str # Current serial port in use
     _polling_task: asyncio.Task # Background task for automatic data polling
     _listeners: list[Callable[[PowerConsumption], None]] # Listeners for data updates
     _listener_futures: list[asyncio.Future] # Futures for one-time data listeners
@@ -36,6 +37,7 @@ class PowerSensorConnection:
     def __init__(self, automatic_polling: bool = True, poll_delay_ms: int = 0, automatic_reconnect: bool = True):
         self._serial = None
         self._decoder = None
+        self._current_port = None
         self._polling_task = None
         self._listeners = []
         self._listener_futures = []
@@ -96,7 +98,6 @@ class PowerSensorConnection:
                         logger.warning("Data polling timed out.")
                         if self._reconnect:
                             logger.info("Attempting to reconnect to the power sensor.")
-                            current_port = self._serial.port
                             # Prevent closing this task
                             my_task = self._polling_task
                             self._polling_task = None
@@ -105,7 +106,7 @@ class PowerSensorConnection:
                             # Restore task
                             self._polling_task = my_task
                             # Reopen connection
-                            await self.open(current_port)
+                            await self.open(self._current_port)
                     last_poll = datetime.now()
                 await asyncio.sleep(sleep_time)
         except asyncio.CancelledError:
@@ -133,6 +134,7 @@ class PowerSensorConnection:
         self._serial = connection
         self._decoder = PowerSensorProtocol(connection, self._handle_data, self._handle_error)
         self._decoder.start_processing()
+        self._current_port = port
         logger.info("Connection created for port %s", port)
         if self._poll and not self._polling_task:
             self._polling_task = asyncio.create_task(self._polling_loop())

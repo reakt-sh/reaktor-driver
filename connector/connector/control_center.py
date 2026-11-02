@@ -23,6 +23,7 @@ class ControlCenter:
     """Central control bundling all capabilities and sensors of the REAKTOR."""
     _session: str # Unique session identifier
     _storage_folder: str # Storage folder for data
+    _latest_data: dict # Latest data snapshot
     _data_storage: AsyncTextIOWrapper # File handle for data storage
     _motor_connection: MotorConnection # Connection to the REAKTOR
     _power_connection: PowerSensorConnection # Connection to the power sensor
@@ -39,6 +40,7 @@ class ControlCenter:
         # Storage
         self._session = None
         self._setup_storage(storage_dir, log_level)
+        self._latest_data = None
 
     def _setup_storage(self, storage_dir: str, log_level: int):
         """Setup storage directory and session identifier."""
@@ -62,12 +64,14 @@ class ControlCenter:
         """Handle status."""
         if isinstance(status, Status):
             power_data = self._power_connection.get_current_data()
-            data = {
+            if power_data and self._latest_data and power_data == self._latest_data.get("power"):
+                power_data = None  # No change in power data, avoid redundant storage
+            self._latest_data = {
                 "timestamp": datetime.now().isoformat(),
                 "status": status.__dict__,
                 "power": power_data.__dict__ if power_data else None,
             }
-            data_str = dumps(data, indent=None, separators=(",",":"), default=str)
+            data_str = dumps(self._latest_data, indent=None, separators=(",",":"), default=str)
             await self._data_storage.write(data_str + ",\n")
             await self._data_storage.flush()
         # else: Errors are already in log

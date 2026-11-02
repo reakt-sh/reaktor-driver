@@ -1,6 +1,6 @@
 """ INTERNAL asynchronous serial connection."""
+
 import asyncio
-from turtle import st
 from typing import Callable
 from serial_asyncio import SerialTransport
 
