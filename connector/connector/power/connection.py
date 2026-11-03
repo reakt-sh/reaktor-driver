@@ -12,7 +12,7 @@ from ..errors import ConnectionProblem
 from .data import PowerConsumption
 from ..util import SerialConnection
 from .protocol import PowerSensorProtocol
-from .config import POWER_METER_BAUDRATE, POWER_METER_BYTESIZE, POWER_METER_PARITY, POWER_METER_STOPBITS, POWER_METER_TIMEOUT
+from ..generated.config_power_meter import POWER_METER_SERIAL_BAUDRATE, POWER_METER_SERIAL_BYTESIZE, POWER_METER_SERIAL_PARITY, POWER_METER_SERIAL_STOPBITS, POWER_METER_SERIAL_TIMEOUT
 from . import POWER_ROOT_LOGGER
 
 logger = POWER_ROOT_LOGGER.getChild("connection")
@@ -93,7 +93,7 @@ class PowerSensorConnection:
                     last_start = datetime.now()
                     self.request_data() # Send request to the power sensor
                     try:
-                        await asyncio.wait_for(self.get_next_data(), timeout=POWER_METER_TIMEOUT)
+                        await asyncio.wait_for(self.get_next_data(), timeout=POWER_METER_SERIAL_TIMEOUT)
                     except TimeoutError:
                         logger.warning("Data polling timed out.")
                         if self._reconnect:
@@ -124,11 +124,11 @@ class PowerSensorConnection:
             asyncio.get_event_loop(),
             SerialConnection,
             port,
-            baudrate=POWER_METER_BAUDRATE,
-            bytesize=POWER_METER_BYTESIZE,
-            parity=POWER_METER_PARITY,
-            stopbits=POWER_METER_STOPBITS,
-            timeout=POWER_METER_TIMEOUT,
+            baudrate=POWER_METER_SERIAL_BAUDRATE,
+            bytesize=POWER_METER_SERIAL_BYTESIZE,
+            parity=POWER_METER_SERIAL_PARITY,
+            stopbits=POWER_METER_SERIAL_STOPBITS,
+            timeout=POWER_METER_SERIAL_TIMEOUT,
         )
         connection.complete_init(identifier=port, error_callback=self._handle_error)
         self._serial = connection

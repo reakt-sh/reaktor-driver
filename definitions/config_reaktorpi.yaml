@@ -1,0 +1,19 @@
+_doc_: "Configuration parameters for the central Rasberry Pi (ReaktorPi) in the control box"
+
+# Serial ports for the devices:
+serial_port_motor:
+  value: "/dev/serial/by-path/platform-xhci-hcd.0-usb-0:2:1.0-port0"
+  c_type: string
+  comment: "Serial port for the motor driver."
+serial_port_power:
+  value: "/dev/serial/by-path/platform-xhci-hcd.1-usb-0:2:1.0-port0"
+  c_type: string
+  comment: "Serial port for the power meter."
+serial_port_motor_env_key:
+  value: "MOTOR_SERIAL_PORT"
+  c_type: string
+  comment: "Environment variable key for overriding the motor driver serial port."
+serial_port_power_env_key:
+  value: "POWER_SERIAL_PORT"
+  c_type: string
+  comment: "Environment variable key for overriding the power meter serial port."  

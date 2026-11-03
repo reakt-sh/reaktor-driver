@@ -8,7 +8,7 @@ from typing import Callable
 from ..errors import ConnectionProblem
 from .data import PowerConsumption
 from ..util import SerialConnection
-from .config import MESSAGE_BYTES
+from ..generated.config_power_meter import POWER_METER_PROTOCOL_MESSAGE_BYTES
 from . import POWER_ROOT_LOGGER
 
 logger = POWER_ROOT_LOGGER.getChild("internal.messages")
@@ -34,10 +34,10 @@ class PowerSensorProtocol:
         try:
             while True:
                 # Read status message bytes form serial
-                input_data = await self._serial.consume(MESSAGE_BYTES)
+                input_data = await self._serial.consume(POWER_METER_PROTOCOL_MESSAGE_BYTES)
                 logger.debug("Received power consumption data: %s", input_data.hex(" "))
                 # Validate
-                if len(input_data) < MESSAGE_BYTES:
+                if len(input_data) < POWER_METER_PROTOCOL_MESSAGE_BYTES:
                     logger.warning("Response too short: %d bytes", len(input_data))
                     continue
                 # Decode data

@@ -78,7 +78,7 @@ class ControlCenter:
 
     async def start(self):
         """Start the observation system."""
-        logger.debug("Starting ControlCenter observation system.")
+        logger.debug("Starting.")
         # Init data storage
         self._data_storage = await aiofiles.open(join(self._storage_folder, f"{self._session}.json"), "w", encoding="utf-8")
         await self._data_storage.write("[\n")  # Start of JSON array
@@ -108,6 +108,7 @@ class ControlCenter:
 
     async def stop(self):
         """Stop the observation system."""
+        logger.debug("Stopping.")
         self._motor_connection.close()
         self._power_connection.close()
         if self._data_storage:
