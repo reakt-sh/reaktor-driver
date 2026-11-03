@@ -55,7 +55,7 @@ void setMotorThrottle(int rpm) {
     if (rpm != lastSetRPM) {
         lastSetRPM = rpm;
         // Convert to DAC scale value
-        int value = RPM_CONVERSION_FACTOR * rpm;
+        int value = RPM_CONVERSION_FACTOR * min(rpm, MOTOR_MAX_RPM);
         // Limit to valid range
         value = min(max(value, 0), DAC_STEPS);
         // Send to DAC
