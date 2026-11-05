@@ -34,7 +34,7 @@ class ControlCenter:
         self._ports = None
         # Motor Connection
         self._motor_connection = MotorConnection()
-        self._motor_connection.add_status_listener(self._handle_status)
+        self._motor_connection.add_data_listener(self._handle_status)
         # Power Meter Connection
         self._power_connection = PowerSensorConnection(poll_delay_ms=power_sensor_poll_delay_ms)
         # Storage

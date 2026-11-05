@@ -5,9 +5,9 @@ from typing import Callable
 from serial_asyncio import SerialTransport
 
 from ..errors import ConnectionProblem
-from . import UTIL_ROOT_LOGGER
+from . import SHARED_ROOT_LOGGER
 
-logger = UTIL_ROOT_LOGGER.getChild("internal.serial")
+logger = SHARED_ROOT_LOGGER.getChild("serial")
 
 class SerialConnection(asyncio.Protocol):
     """Internal asynchronous serial connection."""

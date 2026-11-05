@@ -1,5 +1,5 @@
 """
-Connector package initialization.
+Connector package.
 """
 from .. import CONNECTOR_ROOT_LOGGER
 

@@ -4,82 +4,44 @@ User-facing connection for managing communication with the power meter.
 
 import asyncio
 from datetime import datetime
-from typing import Callable
-from inspect import iscoroutinefunction
 from serial_asyncio import create_serial_connection
 
-from ..errors import ConnectionProblem
 from .data import PowerConsumption
-from ..util import SerialConnection
 from .protocol import PowerSensorProtocol
+from ..shared import DataProvider, SerialConnection
 from ..generated.config_power_meter import POWER_METER_SERIAL_BAUDRATE, POWER_METER_SERIAL_BYTESIZE, POWER_METER_SERIAL_PARITY, POWER_METER_SERIAL_STOPBITS, POWER_METER_SERIAL_TIMEOUT
 from . import POWER_ROOT_LOGGER
 
 logger = POWER_ROOT_LOGGER.getChild("connection")
 
-class PowerSensorConnection:
+class PowerSensorConnection(DataProvider[PowerConsumption]):
     """Connection to the power sensor."""
 
     _serial: SerialConnection # Internal serial connection handler
     _decoder: PowerSensorProtocol # Message handler for en/decoding messages
     _current_port: str # Current serial port in use
     _polling_task: asyncio.Task # Background task for automatic data polling
-    _listeners: list[Callable[[PowerConsumption], None]] # Listeners for data updates
-    _listener_futures: list[asyncio.Future] # Futures for one-time data listeners
-    _listener_tasks: set # Background tasks for async listeners
-    _problems: list[ConnectionProblem] # List of connection problems
     _pending_request: bool # Flag to indicate if a data request is pending
     _poll: bool # Flag to indicate if automatic polling is enabled
     _poll_delay_ms: int # Delay between automatic polls in milliseconds
     _reconnect: bool # Flag to indicate if automatic reconnection is enabled
-    current_data: PowerConsumption # Latest received data
 
     def __init__(self, automatic_polling: bool = True, poll_delay_ms: int = 0, automatic_reconnect: bool = True):
+        super().__init__()
         self._serial = None
         self._decoder = None
         self._current_port = None
         self._polling_task = None
-        self._listeners = []
-        self._listener_futures = []
-        self._listener_tasks = set()
-        self._problems = []
         self._pending_request = False
         self._poll = automatic_polling
         self._poll_delay_ms = poll_delay_ms
         self._reconnect = automatic_reconnect
-        self.current_data = None
-
-    # Internal API
-
-    def _handle_error(self, problem: ConnectionProblem):
-        """Register a connection problem."""
-        self._problems.append(problem)
-        self._notify_listeners(problem)
 
     def _handle_data(self, data: PowerConsumption):
-        """Store data and notify all registered listeners about new data."""
-        self.current_data = data
         self._pending_request = False
-        self._notify_listeners(data)
+        super()._handle_data(data)
 
-    def _notify_listeners(self, event: PowerConsumption | ConnectionProblem):
-        """Notify all registered listeners about new data or a problem."""
-        # One-time listeners
-        for listener in self._listener_futures:
-            if asyncio.isfuture(listener) and not listener.done():
-                listener.set_result(event)
-        self._listener_futures = []
-        # Persistent listeners
-        for listener in self._listeners:
-            try:
-                if iscoroutinefunction(listener):
-                    task = asyncio.create_task(listener(event))
-                    self._listener_tasks.add(task)
-                    task.add_done_callback(self._listener_tasks.discard)
-                else:
-                    listener(event)
-            except Exception as e:
-                logger.error("Failed to notify data listener: %s", e)
+    # Internal API
 
     async def _polling_loop(self):
         """Background task to poll data from the power sensor."""
@@ -138,28 +100,6 @@ class PowerSensorConnection:
         logger.info("Connection created for port %s", port)
         if self._poll and not self._polling_task:
             self._polling_task = asyncio.create_task(self._polling_loop())
-
-    async def get_next_data(self) -> PowerConsumption | ConnectionProblem:
-        """Get the next data when received. ASYNC! If you do not want to miss data messages, add a listener."""
-        collector = asyncio.get_running_loop().create_future()
-        self._listener_futures.append(collector)
-        return await collector
-
-    def get_current_data(self) -> PowerConsumption:
-        """Get the latest received data. If you do not want to miss data messages, add a listener."""
-        return self.current_data
-
-    def add_data_listener(self, listener: Callable[[PowerConsumption | ConnectionProblem], None]):
-        """Add a listener for data updates. Callback can be sync or async function. The pace of data updates is determined by control command responses and heartbeats. If you want to increase data updates send additional controls/heartbeats or switch to manual heartbeat mode."""
-        self._listeners.append(listener)
-
-    def get_problems(self) -> list[ConnectionProblem]:
-        """Get the list of connection problems."""
-        return self._problems[:]
-
-    def clear_problems(self):
-        """Clear the list of connection problems."""
-        self._problems.clear()
 
     def request_data(self):
         """Request data from the power sensor. This is a synchronous call that will return immediately. The data will be delivered to listeners or the next get_next_data() call."""

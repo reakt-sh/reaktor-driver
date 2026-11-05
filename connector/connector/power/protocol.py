@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import Callable
 from ..errors import ConnectionProblem
 from .data import PowerConsumption
-from ..util import SerialConnection
+from ..shared import SerialConnection
 from ..generated.config_power_meter import POWER_METER_PROTOCOL_MESSAGE_BYTES
 from . import POWER_ROOT_LOGGER
 

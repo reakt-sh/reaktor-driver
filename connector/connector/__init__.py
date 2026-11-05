@@ -1,5 +1,5 @@
 """
-Connector package initialization.
+Connector package.
 """
 
 import logging

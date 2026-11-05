@@ -2,5 +2,6 @@ bitprotolib==1.0.1
 pyserial-asyncio==0.6
 aiofiles==25.1.0
 types-aiofiles==25.1.0.*
+gpsd==3.27.5.*
 python-dotenv==1.2.4
 pydantic==2.12.5

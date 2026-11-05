@@ -12,7 +12,7 @@ from ..generated.communication_bp import StatusMessage, ControlAnnouncementMessa
 from ..generated.config_communication import COMM_STATUS_MESSAGE_TIME_BITSIZE, COMM_MESSAGE_ACKNOWLEDGEMENT_CODE_BITSIZE, COMM_CONTROL_MESSAGE_ACKNOWLEDGEMENT_TIME, COMM_PROTOCOL_VERSION
 from ..generated.config_vehicle import MOTOR_SPEED_TRANSMISSION_FACTOR
 from ..generated.errors import ERROR_MAP
-from ..util import SerialConnection
+from ..shared import SerialConnection
 from .data import Control, InternalState, Status
 from . import MOTOR_ROOT_LOGGER
 
