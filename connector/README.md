@@ -1,6 +1,7 @@
 # REAKTOR Driver Connector
 
-The Python module that handles the serial connections to the Arduino driver board.
+The Python module that handles the serial connections to the Arduino driver board and the power meter.
+Public entry point is the `ControlCenter` class, which handles all connections and provides data logging.
 
 ## Developer Setup
 

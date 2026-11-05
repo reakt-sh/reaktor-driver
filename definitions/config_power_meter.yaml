@@ -1,0 +1,33 @@
+_doc_: "Configuration parameters for the power meter"
+
+# Serial connection settings
+doc_serial:
+  comment: "Serial connection settings for the power meter."
+power_meter_serial_baudrate:
+  value: 9600
+  c_type: int
+  comment: "Baud rate for the power meter serial connection."
+power_meter_serial_bytesize:
+  value: 8
+  c_type: int
+  comment: "Byte size for the power meter serial connection."
+power_meter_serial_parity:
+  value: "N"
+  c_type: string
+  comment: "Parity for the power meter serial connection. Value: serial.PARITY_NONE"
+power_meter_serial_stopbits:
+  value: 1
+  c_type: int
+  comment: "Stop bits for the power meter serial connection. Value: serial.STOPBITS_ONE"
+power_meter_serial_timeout:
+  value: 1.0
+  c_type: float
+  comment: "Timeout in seconds for the power meter serial connection."  
+
+# Protocol settings
+doc_protocol:
+  comment: "Protocol settings for the power meter."
+power_meter_protocol_message_bytes:
+  value: 21
+  c_type: int
+  comment: "Number of bytes in a single response from the power meter."
