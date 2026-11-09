@@ -13,7 +13,7 @@ from .power.connection import PowerSensorConnection
 from .power.data import PowerConsumption
 from .util.device_helper import get_serial_ports, SerialPorts
 from .motor.connection import MotorConnection
-from .gnss.connection import GNSSConnection
+from .gnss import GNSSConnection, GNSSMode, Position
 from .errors import ConnectionProblem
 from .motor.data import InternalState, Status
 from .util.config_logging import activate_file_logging
@@ -71,7 +71,9 @@ class ControlCenter:
         """Custom serializer for non-serializable objects."""
         if isinstance(obj, datetime):
             return obj.isoformat()
-        elif isinstance(obj, Status) or isinstance(obj, InternalState) or isinstance(obj, PowerConsumption) or isinstance(obj, Position):
+        if isinstance(obj, GNSSMode):
+            return obj.value
+        if isinstance(obj, Status) or isinstance(obj, InternalState) or isinstance(obj, PowerConsumption) or isinstance(obj, Position):
             return obj.__dict__
         return str(obj)
 
