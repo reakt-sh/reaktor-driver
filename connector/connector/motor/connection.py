@@ -66,7 +66,7 @@ class MotorConnection(DataProvider[Status]):
         )
         connection.complete_init(identifier=port, error_callback=self._handle_error)
         self._serial = connection
-        self._decoder = MotorProtocol(connection, self._handle_status, self._handle_error)
+        self._decoder = MotorProtocol(connection, self._handle_data, self._handle_error)
         # Wait until the connection is fully established (driver indicates connected)
         if await self._decoder.start_processing():
             self._opened = True
