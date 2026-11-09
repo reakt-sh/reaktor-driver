@@ -73,7 +73,7 @@ class ControlCenter:
             return obj.isoformat()
         if isinstance(obj, GNSSMode):
             return obj.value
-        if isinstance(obj, Status) or isinstance(obj, InternalState) or isinstance(obj, PowerConsumption) or isinstance(obj, Position):
+        if isinstance(obj, (Status, InternalState, PowerConsumption, Position)):
             return obj.__dict__
         return str(obj)
 
