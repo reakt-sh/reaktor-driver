@@ -106,6 +106,9 @@ class ControlCenter:
             data_str = dumps(data, indent=None, separators=(",",":"), default=self._serialize_data)
             await self._data_storage.write(data_str + ",\n")
             await self._data_storage.flush()
+            # Broadcast to live data server if running
+            if self._live_data.is_running():
+                await self._live_data.broadcast(data_str)
         # else: Errors are already in log
 
     async def start(self, live_data: bool = False):

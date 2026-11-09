@@ -54,6 +54,7 @@ class LiveDataServer():
             self._app,
             host="0.0.0.0",
             port=self.port,
+            print=None
         ))
         self._running = True
 
@@ -70,6 +71,4 @@ class LiveDataServer():
     async def broadcast(self, msg: str):
         """Broadcast data to all connected WebSocket clients."""
         logger.info("Broadcasting message to %d clients.", len(self._connections))
-        for ws in self._connections:
-            if not ws.closed:
-                await ws.send_str(msg)
+        await asyncio.gather(*[ws.send_str(msg) for ws in self._connections if not ws.closed])
