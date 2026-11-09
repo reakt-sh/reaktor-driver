@@ -9,9 +9,10 @@ from pydantic import BaseModel
 
 class GNSSMode(Enum):
     """GNSS mode enumeration."""
-    NO_FIX = 0
-    FIX_2D = 1
-    FIX_3D = 2
+    UNKNOWN = 0
+    NO_FIX = 1
+    FIX_2D = 2
+    FIX_3D = 3
 
 class Position(BaseModel):
     """GNSS position data."""

@@ -8,7 +8,7 @@ from gps.aiogps import aiogps
 
 from ..shared import DataProvider
 from ..errors import ConnectionProblem
-from .data import Position
+from .data import GNSSMode, Position
 from . import GNSS_ROOT_LOGGER
 
 logger = GNSS_ROOT_LOGGER.getChild("connection")
@@ -54,6 +54,7 @@ class GNSSConnection(DataProvider[Position]):
                             if msg.get("class") == "TPV":
                                 position = Position(
                                     time=datetime.now(),
+                                    mode=GNSSMode(msg.get("mode")) if msg.get("mode") is not None else GNSSMode.NO_FIX,
                                     latitude=msg.get("lat"),
                                     longitude=msg.get("lon"),
                                     altitude=msg.get("alt"),
