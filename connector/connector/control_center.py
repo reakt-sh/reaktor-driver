@@ -129,11 +129,14 @@ class ControlCenter:
         # Close connections
         self._motor_connection.close()
         self._power_connection.close()
+        self._gnss_connection.close()
         # Reopen connections
         logger.debug("Reopening connection to motor driver on port %s", self._ports.motor)
         await self._motor_connection.open(self._ports.motor)
         logger.debug("Reopening connection to power meter on port %s", self._ports.power)
         await self._power_connection.open(self._ports.power)
+        logger.debug("Reopening connection to GNSS receiver.")
+        await self._gnss_connection.open()
 
     async def stop(self):
         """Stop the observation system."""
@@ -153,3 +156,7 @@ class ControlCenter:
     def get_power_connection(self) -> PowerSensorConnection:
         """Get the active power sensor connection."""
         return self._power_connection
+
+    def get_gnss_connection(self) -> GNSSConnection:
+        """Get the active GNSS connection."""
+        return self._gnss_connection

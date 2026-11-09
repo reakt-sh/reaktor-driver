@@ -45,22 +45,29 @@ class GNSSConnection(DataProvider[Position]):
         """Background task to update data from the GNSS receiver."""
         try:
             async with self._client as gpsd:
+                last_noise_report = None
+                last_sky_report = None
                 while True:
                     try:
                         async for msg in gpsd:
                             logger.debug(f"Received: {msg}")
                             if msg.get("class") == "TPV":
                                 position = Position(
+                                    time=datetime.now(),
                                     latitude=msg.get("lat"),
                                     longitude=msg.get("lon"),
                                     altitude=msg.get("alt"),
                                     speed=msg.get("speed"),
-                                    # climb=msg.get("climb"),
-                                    # track=msg.get("track"),
-                                    # mode=msg.get("mode"),
-                                    # time=datetime.fromisoformat(msg.get("time")) if msg.get("time") else None
+                                    gps_time=datetime.fromisoformat(msg.get("time")) if msg.get("time") else None,
+                                    raw=msg,
+                                    last_sky_report=last_sky_report,
+                                    last_noise_report=last_noise_report
                                 )
                                 self._handle_data(position)
+                            elif msg.get("class") == "SKY":
+                                last_sky_report = msg
+                            elif msg.get("class") == "GST":
+                                last_noise_report = msg
                     except asyncio.IncompleteReadError:
                         logger.info("Connection closed by server")
                     except asyncio.TimeoutError:
