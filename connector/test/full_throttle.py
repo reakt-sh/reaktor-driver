@@ -9,7 +9,7 @@ from test_context import ControlCenter, Control, Mode
 async def main():
     cc = ControlCenter(storage_dir="./local", log_level=logging.DEBUG)
     connection = cc.get_reaktor_connection()
-    await cc.start()
+    await cc.start(live_data=True)  # Start with live data server enabled
 
     # Testing
     try:

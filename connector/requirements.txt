@@ -3,5 +3,6 @@ pyserial-asyncio==0.6
 aiofiles==25.1.0
 types-aiofiles==25.1.0.*
 gpsd==3.27.5.*
+aiohttp[speedups]==3.14.5
 python-dotenv==1.2.4
 pydantic==2.12.5

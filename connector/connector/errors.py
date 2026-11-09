@@ -5,6 +5,7 @@ Error types.
 from datetime import datetime
 
 class ConnectionProblem(Exception):
+    """Represents a problem with a connection."""
     cause: Exception | None # Underlying cause of the problem, if any
     time: datetime # Timestamp when the problem occurred
 

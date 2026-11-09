@@ -2,16 +2,17 @@
 User-facing control center bundling all capabilities and sensors of the REAKTOR.
 """
 import logging
-import aiofiles
 from json import dumps
 from os import makedirs
 from os.path import exists, isdir, isfile, join
 from datetime import datetime
+import aiofiles
 from aiofiles.threadpool.text import AsyncTextIOWrapper
 
 from .power.connection import PowerSensorConnection
 from .power.data import PowerConsumption
 from .util.device_helper import get_serial_ports, SerialPorts
+from .util.live_data_server import LiveDataServer
 from .motor.connection import MotorConnection
 from .gnss import GNSSConnection, GNSSMode, Position
 from .errors import ConnectionProblem
@@ -32,8 +33,9 @@ class ControlCenter:
     _power_connection: PowerSensorConnection # Connection to the power sensor
     _gnss_connection: GNSSConnection # Connection to the GNSS
     _ports: SerialPorts # Serial ports for motor and power sensor
+    _live_data: LiveDataServer # Web server for live data broadcasting
 
-    def __init__(self, storage_dir: str = ".", log_level: int = logging.WARNING, power_sensor_poll_delay_ms: int = 0):
+    def __init__(self, storage_dir: str = ".", log_level: int = logging.WARNING, power_sensor_poll_delay_ms: int = 0, live_data_port: int = 8080):
         logger.debug("New ControlCenter instance created.")
         self._ports = None
         # Motor Connection
@@ -43,6 +45,8 @@ class ControlCenter:
         self._power_connection = PowerSensorConnection(poll_delay_ms=power_sensor_poll_delay_ms)
         # GNSS Connection
         self._gnss_connection = GNSSConnection()
+        # Live Data Server
+        self._live_data = LiveDataServer(port=live_data_port)
         # Storage
         self._session = None
         self._setup_storage(storage_dir, log_level)
@@ -104,7 +108,7 @@ class ControlCenter:
             await self._data_storage.flush()
         # else: Errors are already in log
 
-    async def start(self):
+    async def start(self, live_data: bool = False):
         """Start the observation system."""
         logger.debug("Starting.")
         # Init data storage
@@ -121,6 +125,10 @@ class ControlCenter:
         # Open connection to GNSS
         logger.debug("Opening connection to GNSS receiver.")
         await self._gnss_connection.open()
+        # Start live data server
+        if live_data:
+            logger.debug("Starting live data server on port %d.", self._live_data.port)
+            self._live_data.start()
 
     async def reconnect(self):
         """Issue a reconnecto on all devices."""
@@ -146,6 +154,8 @@ class ControlCenter:
         self._motor_connection.close()
         self._power_connection.close()
         self._gnss_connection.close()
+        if self._live_data.is_running():
+            self._live_data.stop()
         if self._data_storage:
             await self._data_storage.write("\n]")  # End of JSON array
             await self._data_storage.flush()
