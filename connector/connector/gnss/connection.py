@@ -59,23 +59,23 @@ class GNSSConnection(DataProvider[Position]):
                                     altitude=msg.get("alt"),
                                     speed=msg.get("speed"),
                                     gps_time=datetime.fromisoformat(msg.get("time")) if msg.get("time") else None,
-                                    raw=msg,
+                                    raw=msg.__dict__,
                                     last_sky_report=last_sky_report,
                                     last_noise_report=last_noise_report
                                 )
                                 self._handle_data(position)
                             elif msg.get("class") == "SKY":
-                                last_sky_report = msg
+                                last_sky_report = msg.__dict__
                             elif msg.get("class") == "GST":
-                                last_noise_report = msg
+                                last_noise_report = msg.__dict__
                     except asyncio.IncompleteReadError:
                         logger.info("Connection closed by server")
                     except asyncio.TimeoutError:
                         logger.error("Timeout waiting for gpsd to respond")
                     except Exception as exc: # pylint: disable=W0703
                         logger.error(f"Error: {exc}")
-                    # Try again in 1s
-                    await asyncio.sleep(1)
+                    # Try again
+                    await asyncio.sleep(.5)
         except asyncio.CancelledError:
             logger.info("Update loop cancelled")
 

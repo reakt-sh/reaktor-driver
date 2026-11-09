@@ -2,6 +2,7 @@
 
 import asyncio
 from typing import Callable, Generic, TypeVar
+from inspect import iscoroutinefunction
 
 from ..errors import ConnectionProblem
 from . import SHARED_ROOT_LOGGER
@@ -47,7 +48,7 @@ class DataProvider(Generic[T]):
         # Persistent listeners
         for listener in self._listeners:
             try:
-                if asyncio.inspect.iscoroutinefunction(listener):
+                if iscoroutinefunction(listener):
                     task = asyncio.create_task(listener(event))
                     self._listener_tasks.add(task)
                     task.add_done_callback(self._listener_tasks.discard)
