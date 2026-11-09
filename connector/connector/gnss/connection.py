@@ -68,7 +68,9 @@ class GNSSConnection(DataProvider[Position]):
                             elif msg.get("class") == "SKY":
                                 last_sky_report = msg.__dict__
                             elif msg.get("class") == "GST":
-                                last_noise_report = msg.__dict__
+                                last_noise_report = msg.__dict__.copy()
+                                if "satellites" in last_noise_report:
+                                    last_noise_report["satellites"] = [sat.__dict__ for sat in last_noise_report["satellites"]]
                     except asyncio.IncompleteReadError:
                         logger.info("Connection closed by server")
                     except asyncio.TimeoutError:
