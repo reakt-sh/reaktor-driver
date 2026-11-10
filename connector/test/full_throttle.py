@@ -7,6 +7,7 @@ import logging
 from test_context import ControlCenter, Control, Mode
 
 async def main():
+    """Main function to run the test."""
     cc = ControlCenter(storage_dir="./local", log_level=logging.DEBUG)
     connection = cc.get_reaktor_connection()
     await cc.start(live_data=True)  # Start with live data server enabled

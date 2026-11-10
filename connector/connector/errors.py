@@ -19,5 +19,4 @@ class ConnectionProblem(Exception):
     def __str__(self):
         if self.cause:
             return f"{self.message} (Caused by: {self.cause})"
-        else:
-            return f"{self.message}"
+        return f"{self.message}"

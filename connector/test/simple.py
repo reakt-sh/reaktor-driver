@@ -21,6 +21,7 @@ def set_status(s: Status | ConnectionProblem):
         print("New status: ", s)
 
 async def main():
+    """Main function to run the test."""
     # Open connection
     connection = MotorConnection()
     activate_file_logging("simple_connector_test.log", level=logging.DEBUG)

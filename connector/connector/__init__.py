@@ -6,6 +6,7 @@ import logging
 
 CONNECTOR_ROOT_LOGGER = logging.getLogger("connector")
 
+# pylint: disable=wrong-import-position
 from .control_center import ControlCenter
 from .errors import ConnectionProblem
 from .motor.connection import MotorConnection
