@@ -263,6 +263,6 @@ void formatDisplaySpeed(char* buffer, int rpm) {
 
     buffer[2] = ',';
 
-    int last = round(speedKmh * 10) % 10;
+    int last = ((int)(speedKmh * 10)) % 10;
     buffer[3] = '0' + last;
 }
