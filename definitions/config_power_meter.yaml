@@ -13,7 +13,6 @@ power_meter_serial_bytesize:
   comment: "Byte size for the power meter serial connection."
 power_meter_serial_parity:
   value: "N"
-  c_type: string
   comment: "Parity for the power meter serial connection. Value: serial.PARITY_NONE"
 power_meter_serial_stopbits:
   value: 1

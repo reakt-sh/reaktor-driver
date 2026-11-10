@@ -10,7 +10,7 @@
 // Serial connection settings for the power meter.
 const int POWER_METER_SERIAL_BAUDRATE = 9600; // Baud rate for the power meter serial connection.
 const int POWER_METER_SERIAL_BYTESIZE = 8; // Byte size for the power meter serial connection.
-const string POWER_METER_SERIAL_PARITY = N; // Parity for the power meter serial connection. Value: serial.PARITY_NONE
+const char* POWER_METER_SERIAL_PARITY = "N"; // Parity for the power meter serial connection. Value: serial.PARITY_NONE
 const int POWER_METER_SERIAL_STOPBITS = 1; // Stop bits for the power meter serial connection. Value: serial.STOPBITS_ONE
 const float POWER_METER_SERIAL_TIMEOUT = 1.0; // Timeout in seconds for the power meter serial connection.
 
