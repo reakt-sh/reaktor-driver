@@ -104,7 +104,7 @@ class ControlCenter:
                 "gnss": gnss_data.__dict__ if gnss_data else None
             }
             data_str = dumps(data, indent=None, separators=(",",":"), default=self._serialize_data)
-            await self._data_storage.write(data_str + ",\n")
+            await self._data_storage.write(data_str + "\n")
             await self._data_storage.flush()
             # Broadcast to live data server if running
             if self._live_data.is_running():
@@ -115,8 +115,7 @@ class ControlCenter:
         """Start the observation system."""
         logger.debug("Starting.")
         # Init data storage
-        self._data_storage = await aiofiles.open(join(self._storage_folder, f"{self._session}.json"), "w", encoding="utf-8")
-        await self._data_storage.write("[\n")  # Start of JSON array
+        self._data_storage = await aiofiles.open(join(self._storage_folder, f"{self._session}.jsonl"), "w", encoding="utf-8")
         # Devices
         self._ports = await get_serial_ports()
         # Open connection to driver
@@ -160,7 +159,6 @@ class ControlCenter:
         if self._live_data.is_running():
             self._live_data.stop()
         if self._data_storage:
-            await self._data_storage.write("\n]")  # End of JSON array
             await self._data_storage.flush()
             await self._data_storage.close()
 
