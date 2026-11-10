@@ -1,11 +1,33 @@
 """
-Connector package initialization.
+Connector package.
 """
+
 import logging
 
 CONNECTOR_ROOT_LOGGER = logging.getLogger("connector")
 
-from .connection import Connection
-from .data import Control, Status, Mode, ErrorState, InternalState, ConnectionProblem
+# pylint: disable=wrong-import-position
+from .control_center import ControlCenter
+from .errors import ConnectionProblem
+from .motor.connection import MotorConnection
+from .motor.data import Control, Status, Mode, ErrorState, InternalState
+from .power.connection import PowerSensorConnection
+from .power.data import PowerConsumption
+from .gnss.connection import GNSSConnection
+from .gnss.data import GNSSMode, Position
 
-__all__ = ["Connection", "Control", "Status", "Mode", "ErrorState", "InternalState", "ConnectionProblem"]
+__all__ = [
+    "ControlCenter",
+    "MotorConnection",
+    "Control",
+    "Status",
+    "Mode",
+    "ErrorState",
+    "InternalState",
+    "PowerSensorConnection",
+    "PowerConsumption",
+    "ConnectionProblem",
+    "GNSSConnection",
+    "GNSSMode",
+    "Position",
+]

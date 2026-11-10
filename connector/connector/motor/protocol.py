@@ -6,27 +6,29 @@ import asyncio
 from datetime import datetime
 from typing import Callable
 from math import floor
-from .data import ConnectionProblem, Control, InternalState, Status
-from .serial_connection_handler import SerialConnectionHandler
-from .generated.communication_bp import StatusMessage, ControlAnnouncementMessage, ConnectionControlMessage, MotorControlMessage, ErrorAppendixMessage, ErrorState, ControlPayloadType
-from .generated.config_communication import COMM_STATUS_MESSAGE_TIME_BITSIZE, COMM_MESSAGE_ACKNOWLEDGEMENT_CODE_BITSIZE, COMM_CONTROL_MESSAGE_ACKNOWLEDGEMENT_TIME, COMM_PROTOCOL_VERSION
-from .generated.config_vehicle import MOTOR_SPEED_TRANSMISSION_FACTOR
-from .generated.errors import ERROR_MAP
-from . import CONNECTOR_ROOT_LOGGER
 
-logger = CONNECTOR_ROOT_LOGGER.getChild("internal.messages")
+from ..errors import ConnectionProblem
+from ..generated.communication_bp import StatusMessage, ControlAnnouncementMessage, ConnectionControlMessage, MotorControlMessage, ErrorAppendixMessage, ErrorState, ControlPayloadType
+from ..generated.config_communication import COMM_STATUS_MESSAGE_TIME_BITSIZE, COMM_MESSAGE_ACKNOWLEDGEMENT_CODE_BITSIZE, COMM_CONTROL_MESSAGE_ACKNOWLEDGEMENT_TIME, COMM_PROTOCOL_VERSION
+from ..generated.config_vehicle import MOTOR_SPEED_TRANSMISSION_FACTOR
+from ..generated.errors import ERROR_MAP
+from ..shared import SerialConnection
+from .data import Control, InternalState, Status
+from . import MOTOR_ROOT_LOGGER
 
-class MessageHandler:
-    """Handler for encoding and decoding messages to/from the vehicle."""
+logger = MOTOR_ROOT_LOGGER.getChild("internal.messages")
 
-    _serial: SerialConnectionHandler # Internal serial connection handler
+class MotorProtocol:
+    """Handler for encoding and decoding messages to/from the REAKTOR motor controller."""
+
+    _serial: SerialConnection # Internal serial connection handler
     _status_callback: Callable[[Status], None] # Callback for new status
     _error_callback: Callable[[ConnectionProblem], None] # Callback for errors
     _worker: asyncio.Task # Background worker task for processing messages
     _next_acknowledgement_code: int # Counter for acknowledgement code
     _unacknowledged_codes: dict[int, datetime] # Set of currently outstanding acknowledgement codes
 
-    def __init__(self, serial: SerialConnectionHandler, status_callback: Callable[[Status], None], error_callback: Callable[[ConnectionProblem], None]):
+    def __init__(self, serial: SerialConnection, status_callback: Callable[[Status], None], error_callback: Callable[[ConnectionProblem], None]):
         self._serial = serial
         self._status_callback = status_callback
         self._error_callback = error_callback
@@ -44,7 +46,7 @@ class MessageHandler:
             while True:
                 # Read status message bytes form serial
                 status_data = await self._serial.consume(StatusMessage.BYTES_LENGTH)
-                logger.debug("Received status message data: %s", status_data.hex())
+                logger.debug("Received status message data: %s", status_data.hex(" "))
                 # Decode status message
                 status_msg = StatusMessage()
                 try:
@@ -62,7 +64,7 @@ class MessageHandler:
                 if status_msg.error != ErrorState.NO_ERROR:
                     logger.debug("Reading error appendix message.")
                     error_data = await self._serial.consume(ErrorAppendixMessage.BYTES_LENGTH)
-                    logger.debug("Received error appendix message data: %s", error_data.hex())
+                    logger.debug("Received error appendix message data: %s", error_data.hex(" "))
                     error_msg = ErrorAppendixMessage()
                     try:
                         error_msg.decode(error_data)
@@ -132,8 +134,6 @@ class MessageHandler:
                 self._status_callback(new_status)
         except asyncio.CancelledError:
             logger.info("Decoder loop stopped")
-        except asyncio.QueueShutDown:
-            logger.info("SerialConnectionHandler shutdown detected, stopping decoder loop")
 
     def _get_next_acknowledgement_code(self) -> int:
         """Get the next acknowledgement code for connection requests."""
@@ -155,7 +155,7 @@ class MessageHandler:
                 logger.error("Acknowledgement timeout. Code: %d. Sent: %s. Received: %s", code, self._unacknowledged_codes[code], datetime.now())
                 self._error_callback(ConnectionProblem("Acknowledgement timeout"))
             else:
-                logger.debug("Received acknowledgement for code: %d", code)
+                logger.debug("Received acknowledgement for code: %d after %d ms", code, (datetime.now() - self._unacknowledged_codes[code]).total_seconds() * 1000)
             del self._unacknowledged_codes[code]
         else:
             logger.warning("Received unknown acknowledgement code: %d", code)

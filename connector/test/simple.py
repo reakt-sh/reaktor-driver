@@ -5,7 +5,7 @@ Tests with a fixed speed.
 
 import logging
 import asyncio
-from test_context import Connection, Status, Control, Mode, ConnectionProblem
+from test_context import MotorConnection, Status, Control, Mode, ConnectionProblem, activate_file_logging
 
 TARGET_SPEED = 3  # Target speed in m/s
 
@@ -21,9 +21,10 @@ def set_status(s: Status | ConnectionProblem):
         print("New status: ", s)
 
 async def main():
+    """Main function to run the test."""
     # Open connection
-    connection = Connection()
-    connection.activate_file_logging("simple_connector_test.log", level=logging.DEBUG)
+    connection = MotorConnection()
+    activate_file_logging("simple_connector_test.log", level=logging.DEBUG)
     connection.add_status_listener(set_status)
     await connection.open("/dev/ttyUSB0")
 
