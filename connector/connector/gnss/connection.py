@@ -57,7 +57,6 @@ class GNSSConnection(DataProvider[Position]):
                                     mode=GNSSMode(msg.get("mode")) if msg.get("mode") is not None else GNSSMode.NO_FIX,
                                     latitude=msg.get("lat"),
                                     longitude=msg.get("lon"),
-                                    altitude=msg.get("alt"),
                                     speed=msg.get("speed"),
                                     gps_time=datetime.fromisoformat(msg.get("time")) if msg.get("time") else None,
                                     raw=msg.__dict__,

@@ -13,6 +13,8 @@ from .motor.connection import MotorConnection
 from .motor.data import Control, Status, Mode, ErrorState, InternalState
 from .power.connection import PowerSensorConnection
 from .power.data import PowerConsumption
+from .gnss.connection import GNSSConnection
+from .gnss.data import GNSSMode, Position
 
 __all__ = [
     "ControlCenter",
@@ -25,4 +27,7 @@ __all__ = [
     "PowerSensorConnection",
     "PowerConsumption",
     "ConnectionProblem",
+    "GNSSConnection",
+    "GNSSMode",
+    "Position",
 ]
