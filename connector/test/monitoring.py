@@ -38,9 +38,7 @@ async def main():
             await asyncio.sleep(1)
         else:
             print("Connection lost, cannot stop motor.")
-
-        connection.close()
-        print("Connection closed.")
+        await cc.stop()
 
 if __name__ == "__main__":
     asyncio.run(main())
