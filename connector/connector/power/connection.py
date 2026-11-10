@@ -58,6 +58,7 @@ class PowerSensorConnection(DataProvider[PowerConsumption]):
                         await asyncio.wait_for(self.get_next_data(), timeout=POWER_METER_SERIAL_TIMEOUT)
                     except TimeoutError:
                         logger.warning("Data polling timed out.")
+                        self._pending_request = False
                         if self._reconnect:
                             logger.info("Attempting to reconnect to the power sensor.")
                             # Prevent closing this task
