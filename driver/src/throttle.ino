@@ -26,7 +26,7 @@ const int MANUAL_THROTTLE_UPPER_DEADZONE_LIMIT = ADC_STEPS - (THROTTLE_LEVER_UPP
 const int MANUAL_THROTTLE_EFFECTIVE_RANGE = MANUAL_THROTTLE_UPPER_DEADZONE_LIMIT - MANUAL_THROTTLE_LOWER_DEADZONE_LIMIT; // Effective range in ADC steps
 
 // Variables
-int lastSetRPM = 0;
+unsigned int lastSetRPM = 0;
 
 // Hardware components
 Adafruit_MCP4725 dac;
@@ -53,9 +53,9 @@ void setMotorThrottle(int rpm) {
         rpm = 0;
     }
     if (rpm != lastSetRPM) {
-        lastSetRPM = rpm;
+        lastSetRPM = rpm < 0 ? 0 : rpm; // Ensure non-negative
         // Convert to DAC scale value
-        int value = RPM_CONVERSION_FACTOR * min(rpm, MOTOR_MAX_RPM);
+        int value = RPM_CONVERSION_FACTOR * min(lastSetRPM, MOTOR_MAX_RPM);
         // Limit to valid range
         value = min(max(value, 0), DAC_STEPS);
         // Send to DAC
