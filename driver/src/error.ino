@@ -47,3 +47,7 @@ uint64_t consumeErrors() {
     bitvectorTransients = 0; // Clear transient errors
     return errors;
 }
+
+uint64_t getErrors() {
+    return bitvectorErrors;
+}

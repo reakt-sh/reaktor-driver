@@ -3,50 +3,97 @@ _doc_: "Configuration parameters for the driver board and connected hardware"
 # Board
 doc_board:
   comment: "Driver board pin specifications"
+
 board_pin_in_motor_meter:
   value: 2
-  c_type: int
+  c_type: uint8_t
   comment: "Pin for reading motor speed."
 board_pin_in_manual_throttle:
   value: A0
-  c_type: int
+  c_type: uint8_t
   comment: "Pin for reading throttle lever position."
 board_pin_in_dac:
   value: A1
-  c_type: int
+  c_type: uint8_t
   comment: "Pin for reading output of DAC."
-board_pin_in_onboard_enable_remote_control:
+board_pin_in_onboard:
   value: 7
-  c_type: int
-  comment: "Pin for reading onboard switch for enabling remote control."
+  c_type: uint8_t
+  comment: "Pin for reading onboard switch (currently not used)."
+board_pin_in_enable_remote_control:
+  value: 22
+  c_type: uint8_t
+  comment: "Pin for reading switch for enabling remote control."
 board_pin_in_manual_forward:
-  value: 51
-  c_type: int
+  value: 24
+  c_type: uint8_t
   comment: "Pin for reading manual forward switch."
 board_pin_in_manual_reverse:
-  value: 47
-  c_type: int
+  value: 26
+  c_type: uint8_t
   comment: "Pin for reading manual reverse switch."
+board_pin_in_panel_knob_enc_a:
+  value: 0
+  c_type: uint8_t
+  comment: "Pin for reading panel knob movement encoded part A."
+board_pin_in_panel_knob_enc_b:
+  value: 0
+  c_type: uint8_t
+  comment: "Pin for reading panel knob movement encoded part B."
+board_pin_in_panel_knob_pressed:
+  value: 29
+  c_type: uint8_t
+  comment: "Pin for reading panel knob pressed state."
+
 board_pin_out_motor_forward:
   value: 6
-  c_type: int
+  c_type: uint8_t
   comment: "Pin for engaging forward drive of the motor."
 board_pin_out_motor_reverse:
   value: 5
-  c_type: int
+  c_type: uint8_t
   comment: "Pin for engaging reverse drive in the motor."
 board_pin_out_motor_brake:
   value: 4
-  c_type: int
+  c_type: uint8_t
   comment: "Pin for engaging brake of the motor."
 board_pin_out_motor_regenerative:
   value: 3
-  c_type: int
+  c_type: uint8_t
   comment: "Pin for engaging regenerative braking of the motor."
+board_pin_out_panel_led_red:
+  value: 27
+  c_type: uint8_t
+  comment: "Pin for red channel of the LED on the control panel."
+board_pin_out_panel_led_green:
+  value: 25
+  c_type: uint8_t
+  comment: "Pin for green channel of the LED on the control panel."
+board_pin_out_panel_led_blue:
+  value: 23
+  c_type: uint8_t
+  comment: "Pin for blue channel of the LED on the control panel."
+board_pin_out_panel_display_sdo:
+  value: 33
+  c_type: uint8_t
+  comment: "Pin for SDO channel of the display on the control panel."
+board_pin_out_panel_display_sdi:
+  value: 35
+  c_type: uint8_t
+  comment: "Pin for SDI channel of the display on the control panel."
+board_pin_out_panel_display_scl:
+  value: 31
+  c_type: uint8_t
+  comment: "Pin for SCL channel of the display on the control panel."
+board_pin_out_panel_display_cs:
+  value: 34
+  c_type: uint8_t
+  comment: "Pin for CS channel of the display on the control panel."
 
 # Analog-Digital Conversion
 doc_dac:
   comment: "Analog conversion specifications"
+
 v_ref:
   value: 5.0
   c_type: float
@@ -65,6 +112,7 @@ adc_steps:
 # Motor
 doc_motor:
   comment: "Motor specifications"
+
 motor_max_rpm:
   value: 1125 # 4500 # Reduced RPM for safety during testing (Synchronize with Motor Controller settings!)
   c_type: unsigned int
@@ -81,6 +129,7 @@ motor_signal_edges_per_revolution:
 # Throttle lever
 doc_throttle:
   comment: "Throttle lever specifications"
+
 throttle_lever_lower_deadzone:
   value: 0.01
   c_type: double

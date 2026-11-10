@@ -1,3 +1,7 @@
+// IMPORTANT:
+// Before releasing a new version of the communication protocol,
+// update the 'comm_protocol_version' parameter in 'config_communication.yaml'.
+
 proto reaktor_driver
 
 enum Mode : uint3 {
@@ -6,10 +10,6 @@ enum Mode : uint3 {
     DRIVE_MODE_REVERSE = 2;
     DRIVE_MODE_PARKING = 3;
     DRIVE_MODE_EMERGENCY_STOP = 4;
-    // In a heartbeat message, the driver will ignore remaining payload (just a keep-alive message)
-    HEARTBEAT = 5;
-    UNUSED_B = 6;
-    UNUSED_C = 7;
 }
 
 enum ErrorState : uint2 {
@@ -18,28 +18,66 @@ enum ErrorState : uint2 {
     FATAL_ERROR = 3;
 }
 
+enum ControlPayloadType : uint3 { // uint3 size to keep room for future types without changing message size
+    HEARTBEAT = 0; // Used as a keep-alive message. No payload will follow.
+    CONNECT = 1;
+    MOTOR = 2;
+    CONFIG = 3;
+}
+
 message StatusMessage {
     //// System state
     // If an error occurred an error appendix message will follow directly after this message!
     ErrorState error = 1;
     bool remote_control = 2;
-    // Time since system start in ms. Receiving end must handle overflows
+    // Time since system start in ms. Receiving end must handle overflows!
     uint32 time = 3;
 
+    //// Communication state
+    bool connection_established = 10;
+    // Acknowledge value of the last received control message. Sent only once, zero afterwards until next control message.
+    uint8 control_acknowledgement = 11;
+
     //// Motor control state
-    Mode mode = 10;
-    uint13 motor_rpm = 11;
-    uint13 target_rpm = 12;
+    Mode mode = 20;
+    uint13 motor_rpm = 21;
+    uint13 target_rpm = 22;
 
     //// Internal state
-    uint13 control_rpm = 21;
+    uint13 control_rpm = 31;
 }
 
 message ErrorAppendixMessage {
     uint64 errors = 1;
 }
 
-message ControlMessage {
-    Mode mode = 1;
-    uint13 target_rpm = 2;
+message ControlAnnouncementMessage {
+    // Acknowledge value that should be returned in the StatusMessage. Must be non-zero to issue an acknowledgment.
+    uint8 acknowledge = 1;
+    // The type of the following control message with the actual payload
+    ControlPayloadType type = 2;
+
+    // Note that this message should not change, otherwise a failed connection handshake due to incompatible protocol versions cannot be correctly detected.
+}
+
+message MotorControlMessage {
+    // Acknowledge value that should be returned in the StatusMessage. Must be non-zero to issue an acknowledgment.
+    uint8 acknowledge = 1;
+
+    Mode mode = 10;
+    uint13 target_rpm = 11;
+}
+
+message ConnectionControlMessage {
+    // Acknowledge value that should be returned in the StatusMessage. Must be non-zero to issue an acknowledgment.
+    uint8 acknowledge = 1;
+
+    uint16 protocol_version = 10;
+}
+
+message ConfigurationControlMessage {
+    // Acknowledge value that should be returned in the StatusMessage. Must be non-zero.
+    uint8 acknowledge = 1;
+
+    // Coming later
 }

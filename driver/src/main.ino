@@ -13,6 +13,7 @@
 #include "throttle.h"
 #include "speed.h"
 #include "switches.h"
+#include "panel.h"
 #include "mode.h"
 #include "error.h"
 
@@ -22,11 +23,12 @@
 void setup(void) {
     // Setup Handlers
     bool success = true;
-    success &= setupCommunication();
     success &= setupSwitches();
     success &= setupRevolutionsDetection();
     success &= setupThrottleHandler();
     success &= setupSpeedHandler();
+    success &= setupPanel();
+    success &= setupCommunication();
 
     // Handle fatal setup errors
     if (!success) {
@@ -43,9 +45,12 @@ tControlCommand remoteControl;
 
 void loop(void) {
     if (hasFatalError()) {
-        // In case of fatal error, just report status
+        // In case of fatal error keep in safe state
         triggerEmergencyStop();
+        // Handle basic communication to allow error reporting
+        handleCommunication(false, &remoteControl);
         sendStatusReport(true);
+        // Wait regular response time
         delay(COMM_STATUS_MESSAGE_SPACING_TIME);
     } else {
         // Normal operation
@@ -61,8 +66,8 @@ void loop(void) {
             }
         }
 
-        // Handle remote control input (even if ignored, ensures freeing comm buffer)
-        bool newControl = checkRemoteControl(remoteControlEnabled, &remoteControl);
+        // Handle communication and update control command if new command received
+        bool newControl = handleCommunication(remoteControlEnabled, &remoteControl);
         if (remoteControlEnabled) {
             if (newControl) {
                 setNextMode(remoteControl.mode);
@@ -71,7 +76,12 @@ void loop(void) {
         } else {
             // Manual control
             setNextMode(inferModeFromSwitches());
-            setTargetRPM(readManualThrottle());
+            // Manual throttle readings tend to be noisy, so only update target speed if the difference is above a threshold
+            // TODO In the future noise elimination should be realized via time-based filtering not a hard rpm limit, especially when the speed limit is increased
+            int newTargetSpeed = readManualThrottle();
+            if (newTargetSpeed == 0 || abs(newTargetSpeed - getTargetRPM()) >= DRIVER_THROTTLE_READING_REACTION_THRESHOLD_RPM) {
+                setTargetRPM(newTargetSpeed);
+            }
         }
 
         // Apply motor speed control
@@ -79,6 +89,9 @@ void loop(void) {
 
         // Do sanity checks
         checkMotorThrottle();
+
+        // Update information on panel
+        updatePanel();
 
         // Send status report
         sendStatusReport(newControl);

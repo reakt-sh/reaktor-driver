@@ -3,26 +3,28 @@ A simple test script for the motor driver connection.
 Tests with a fixed speed.
 """
 
-import asyncio
 import logging
-from context import Connection, Status, Control, Mode
+import asyncio
+from test_context import MotorConnection, Status, Control, Mode, ConnectionProblem, activate_file_logging
 
 TARGET_SPEED = 3  # Target speed in m/s
 
 # Status handling
 status = None
-def set_status(s: Status):
+def set_status(s: Status | ConnectionProblem):
     """Callback for new status messages."""
-    global status
-    status = s
-    print("New status: ", s)
+    if isinstance(s, ConnectionProblem):
+        print("Error: ", s)
+    else:
+        global status
+        status = s
+        print("New status: ", s)
 
 async def main():
-    # Uncomment for debugging output
-    # logging.basicConfig(level=logging.DEBUG)
-
+    """Main function to run the test."""
     # Open connection
-    connection = Connection()
+    connection = MotorConnection()
+    activate_file_logging("simple_connector_test.log", level=logging.DEBUG)
     connection.add_status_listener(set_status)
     await connection.open("/dev/ttyUSB0")
 
@@ -31,11 +33,12 @@ async def main():
         print("Warning: Connection not yet ready. Check connection.")
     while not status:
         print("Waiting for initial status...")
-        await asyncio.sleep(.1)
+        await asyncio.sleep(.2)
 
     # Test state
-    if not status.remote_control:
+    while not status.remote_control:
         print("Warning: Driver not in remote control mode.")
+        await asyncio.sleep(.5)
 
     # Testing
     try:
