@@ -26,6 +26,7 @@ class ControlCenter:
     """Central control bundling all capabilities and sensors of the REAKTOR."""
     _session: str # Unique session identifier
     _storage_folder: str # Storage folder for data
+    store_data: bool # Flag to indicate if data storage is enabled
     _latest_power_data: dict # Latest power data snapshot
     _latest_gnss_data: dict # Latest GNSS data snapshot
     _data_storage: AsyncTextIOWrapper # File handle for data storage
@@ -35,7 +36,7 @@ class ControlCenter:
     _ports: SerialPorts # Serial ports for motor and power sensor
     _live_data: LiveDataServer # Web server for live data broadcasting
 
-    def __init__(self, storage_dir: str = ".", log_level: int = logging.WARNING, power_sensor_poll_delay_ms: int = 0, live_data_port: int = 8080):
+    def __init__(self, storage_dir: str = ".", store_data: bool = True, log_level: int = logging.WARNING, power_sensor_poll_delay_ms: int = 0, live_data_port: int = 8080):
         logger.debug("New ControlCenter instance created.")
         self._ports = None
         # Motor Connection
@@ -48,6 +49,7 @@ class ControlCenter:
         # Live Data Server
         self._live_data = LiveDataServer(port=live_data_port)
         # Storage
+        self.store_data = store_data
         self._session = None
         self._setup_storage(storage_dir, log_level)
         self._latest_power_data = None
@@ -83,7 +85,7 @@ class ControlCenter:
 
     async def _handle_status(self, status: Status | ConnectionProblem):
         """Handle status."""
-        if isinstance(status, Status):
+        if (self.store_data or self._live_data.is_running()) and isinstance(status, Status):
             # Power
             power_data = self._power_connection.get_current_data()
             if power_data and self._latest_power_data and power_data == self._latest_power_data:
@@ -104,8 +106,10 @@ class ControlCenter:
                 "gnss": gnss_data.__dict__ if gnss_data else None
             }
             data_str = dumps(data, indent=None, separators=(",",":"), default=self._serialize_data)
-            await self._data_storage.write(data_str + "\n")
-            await self._data_storage.flush()
+            # Store data in file
+            if self.store_data:
+                await self._data_storage.write(data_str + "\n")
+                await self._data_storage.flush()
             # Broadcast to live data server if running
             if self._live_data.is_running():
                 await self._live_data.broadcast(data_str)
@@ -114,6 +118,9 @@ class ControlCenter:
     async def start(self, live_data: bool = False):
         """Start the observation system."""
         logger.debug("Starting.")
+        if self._data_storage:
+            logger.warning("Control center already started.")
+            return
         # Init data storage
         self._data_storage = await aiofiles.open(join(self._storage_folder, f"{self._session}.jsonl"), "w", encoding="utf-8")
         # Devices
@@ -161,6 +168,7 @@ class ControlCenter:
         if self._data_storage:
             await self._data_storage.flush()
             await self._data_storage.close()
+            self._data_storage = None
 
     def get_reaktor_connection(self) -> MotorConnection:
         """Get the active control connection."""
