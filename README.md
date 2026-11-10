@@ -24,4 +24,4 @@ This repository is structured into two main components and auxiliary data:
 - **[driver](./driver)** The Arduino software that controls the motor controller and handles manual inputs (throttle lever, switches, etc.).
 - **[connector](./connector)** The Python module that provides an API for the control of all REAKTOR systems, including the driver board and power sensors.
 - **[definitions](./definitions)** Central definitions and configurations for both main components.
-- **[schematics](./schematics)** The schematics for the REAKTOR control box with all peripheral devices.
+- **[doc](./doc)** Documentation for the vehicle setup, including schematics for the REAKTOR control box with all peripheral devices.
