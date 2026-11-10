@@ -10,23 +10,23 @@ bool setupSpeedHandler();
 /**
  * Set the target RPM for the motor.
  */
-void setTargetRPM(int rpm);
+void setTargetRPM(unsigned int rpm);
 
 /**
  * Get the current target RPM.
  */
-int getTargetRPM();
+unsigned int getTargetRPM();
 
 /**
  * Get the current RPM of the motor.
  * This value is only up-to-date after calling controlSpeed().
  */
-int getCurrentRPM();
+unsigned int getCurrentRPM();
 
 /**
  * Get the currently applied RPM.
  */
-int getControlRPM();
+unsigned int getControlRPM();
 /**
  * Control motor speed.
  */

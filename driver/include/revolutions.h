@@ -12,4 +12,4 @@ bool setupRevolutionsDetection();
  *
  * @return speed in revolutions per minute
  */
-int getRevolutionsPerMinute();
+unsigned int getRevolutionsPerMinute();

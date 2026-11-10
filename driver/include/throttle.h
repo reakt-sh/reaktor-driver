@@ -14,7 +14,7 @@ bool setupThrottleHandler();
  *
  * @param rpm The throttle value in rpm
  */
-void setMotorThrottle(int rpm);
+void setMotorThrottle(unsigned int rpm);
 
 /**
  * Check if the motor throttle signal is correctly applied.
@@ -27,4 +27,4 @@ void checkMotorThrottle();
  *
  * @retrun The desired rpm as set by the throttle lever
  */
-int readManualThrottle();
+unsigned int readManualThrottle();

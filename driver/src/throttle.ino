@@ -26,7 +26,7 @@ const int MANUAL_THROTTLE_UPPER_DEADZONE_LIMIT = ADC_STEPS - (THROTTLE_LEVER_UPP
 const int MANUAL_THROTTLE_EFFECTIVE_RANGE = MANUAL_THROTTLE_UPPER_DEADZONE_LIMIT - MANUAL_THROTTLE_LOWER_DEADZONE_LIMIT; // Effective range in ADC steps
 
 // Variables
-int lastSetRPM = 0;
+unsigned int lastSetRPM = 0;
 
 // Hardware components
 Adafruit_MCP4725 dac;
@@ -47,7 +47,7 @@ bool setupThrottleHandler() {
     return success;
 }
 
-void setMotorThrottle(int rpm) {
+void setMotorThrottle(unsigned int rpm) {
     if (hasFatalError()) {
         // In case of fatal error, ensure throttle is zero
         rpm = 0;
@@ -73,7 +73,7 @@ void checkMotorThrottle() {
     // TODO Check if DAC produces the correct voltage (in time) and raise error if not, also stop vehicle
 }
 
-int readManualThrottle() {
+unsigned int readManualThrottle() {
     int sample = analogRead(BOARD_PIN_IN_MANUAL_THROTTLE); // Read the analog input
     // Apply deadzone
     if (sample <= MANUAL_THROTTLE_LOWER_DEADZONE_LIMIT) {

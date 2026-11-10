@@ -23,7 +23,7 @@ bool setupRevolutionsDetection() {
     return true;
 }
 
-int getRevolutionsPerMinute() {
+unsigned int getRevolutionsPerMinute() {
     const unsigned long currentTime = millis();
     // Since we store the duration of the last full revolution, we must consider that more time passes when speed is reducing
     if (lastRevolutionTime == 0 || revolutionDuration == 0) {

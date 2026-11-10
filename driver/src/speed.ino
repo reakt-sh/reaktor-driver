@@ -15,9 +15,9 @@
 // Configuration
 const int PID_SAMPLE_TIME = 25; // PID calculation interval in ms
 // Variables
-int currentRPM = 0;  // Current speed in RPM
-int targetRPM = 0;   // Target speed in RPM
-int appliedRPM = 0;  // Applied speed in RPM in last control cycle
+unsigned int currentRPM = 0;  // Current speed in RPM
+unsigned int targetRPM = 0;   // Target speed in RPM
+unsigned int appliedRPM = 0;  // Applied speed in RPM in last control cycle
 bool decelerationBraking = false; // Flag to indicate that the vehicle should brake for deceleration (target RPM was reduced or speed overshoot was detected)
 bool keepZero = true; // Keep speed at 0 RPM until first non-zero target is set
 
@@ -41,7 +41,7 @@ bool setupSpeedHandler() {
     return true;
 }
 
-void setTargetRPM(int rpm) {
+void setTargetRPM(unsigned int rpm) {
     if (rpm < targetRPM) {
         // Target speed was reduced, activate braking for deceleration
         decelerationBraking = true;
@@ -49,15 +49,15 @@ void setTargetRPM(int rpm) {
     targetRPM = rpm;
 }
 
-int getTargetRPM() {
+unsigned int getTargetRPM() {
     return targetRPM;
 }
 
-int getCurrentRPM() {
+unsigned int getCurrentRPM() {
     return currentRPM;
 }
 
-int getControlRPM() {
+unsigned int getControlRPM() {
     return appliedRPM;
 }
 
@@ -128,7 +128,7 @@ void controlSpeed() {
     if (keepZero) {
         appliedRPM = 0; // Override PID output to ensure 0 RPM
     } else {
-        appliedRPM = (int) pidOutput;
+        appliedRPM = (unsigned int) pidOutput;
     }
     setMotorThrottle(appliedRPM);
 }
