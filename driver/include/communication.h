@@ -1,16 +1,8 @@
 #pragma once
 
-#include "mode.h"
+#include "control_command.h"
 
-/**
- * A single remote control command.
- * Type adjusted content of a valid control message.
- */
-struct ControlCommand {
-    DriveMode mode;
-    unsigned int target_rpm;
-};
-typedef struct ControlCommand tControlCommand;
+typedef struct StatusMessage tStatusMessage;
 
 /**
  * Setup serial communication.
@@ -22,11 +14,12 @@ bool setupCommunication();
 /**
  * Handle communication and incoming remote control command.
  *
- * @param ignore if true, the message will be discarded and not processed
+ * @param remoteControlRequested if true, the message will be discarded and not processed, if false connection loss will cause an error
  * @param control pointer to store the decoded control command
+ * @param newControlReceived pointer to a boolean that will be set to true if a new control command was received
  * @return true if a valid control input was received and decoded
  */
-bool handleCommunication(bool ignore, tControlCommand* control);
+bool handleCommunication(bool remoteControlRequested, tControlCommand* control, bool* newControlReceived);
 
 /**
  * Handle sending status report message.
@@ -34,3 +27,10 @@ bool handleCommunication(bool ignore, tControlCommand* control);
  * @param force if true, the message will be sent immediately, ignoring spacing constraints
  */
 void sendStatusReport(bool force);
+
+/**
+ * Get the next status report to fill in status information.
+ *
+ * @return pointer to the next status report
+ */
+tStatusMessage* getNextStatusReport();

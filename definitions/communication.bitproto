@@ -25,10 +25,18 @@ enum ControlPayloadType : uint3 { // uint3 size to keep room for future types wi
     CONFIG = 3;
 }
 
+enum DetectedMovement : uint2 {
+    NO_MOVEMENT = 0;
+    MOVEMENT_FORWARD = 1;
+    MOVEMENT_REVERSE = 2;
+    MOVEMENT_UNKNOWN_DIRECTION = 3;
+}
+
 message StatusMessage {
     //// System state
     // If an error occurred an error appendix message will follow directly after this message!
     ErrorState error = 1;
+    // Indicates whether the system is currently under remote control or not.
     bool remote_control = 2;
     // Time since system start in ms. Receiving end must handle overflows!
     uint32 time = 3;
@@ -44,7 +52,16 @@ message StatusMessage {
     uint13 target_rpm = 22;
 
     //// Internal state
-    uint13 control_rpm = 31;
+    // Switches
+    bool switch_remote_control = 31;
+    bool switch_forward = 32;
+    bool switch_reverse = 33;
+    uint13 throttle_lever_rpm = 34;
+    // Safety automata state
+    DetectedMovement detected_movement = 35;
+    // Speed control
+    uint13 control_rpm = 36;
+    bool brake_value = 37;
 }
 
 message ErrorAppendixMessage {

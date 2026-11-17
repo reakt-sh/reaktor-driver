@@ -91,16 +91,43 @@ def bp_processor_ControlPayloadType() -> bp.Processor:
     return bp.EnumProcessor(bp.Uint(3))
 
 
+@unique
+class DetectedMovement(IntEnum): # 2bit
+    NO_MOVEMENT = 0
+    MOVEMENT_FORWARD = 1
+    MOVEMENT_REVERSE = 2
+    MOVEMENT_UNKNOWN_DIRECTION = 3
+
+
+# Aliases for backwards compatibility
+NO_MOVEMENT: DetectedMovement = DetectedMovement.NO_MOVEMENT
+MOVEMENT_FORWARD: DetectedMovement = DetectedMovement.MOVEMENT_FORWARD
+MOVEMENT_REVERSE: DetectedMovement = DetectedMovement.MOVEMENT_REVERSE
+MOVEMENT_UNKNOWN_DIRECTION: DetectedMovement = DetectedMovement.MOVEMENT_UNKNOWN_DIRECTION
+
+
+_DETECTEDMOVEMENT_VALUE_TO_NAME_MAP: Dict[DetectedMovement, str] = {
+    DetectedMovement.NO_MOVEMENT: "NO_MOVEMENT",
+    DetectedMovement.MOVEMENT_FORWARD: "MOVEMENT_FORWARD",
+    DetectedMovement.MOVEMENT_REVERSE: "MOVEMENT_REVERSE",
+    DetectedMovement.MOVEMENT_UNKNOWN_DIRECTION: "MOVEMENT_UNKNOWN_DIRECTION",
+}
+
+def bp_processor_DetectedMovement() -> bp.Processor:
+    return bp.EnumProcessor(bp.Uint(2))
+
+
 @dataclass
 class StatusMessage(bp.MessageBase):
     # Number of bytes to serialize class StatusMessage
-    BYTES_LENGTH: ClassVar[int] = 11
+    BYTES_LENGTH: ClassVar[int] = 14
 
     # // System state
     # If an error occurred an error appendix message will follow directly after this message!
     error: Union[int, ErrorState] = ErrorState.NO_ERROR
     # This field is a proxy to hold integer value of enum field 'error'
     _enum_field_proxy__error: int = field(init=False, repr=False) # 2bit
+    # Indicates whether the system is currently under remote control or not.
     remote_control: bool = False # 1bit
     # Time since system start in ms. Receiving end must handle overflows!
     time: int = 0 # 32bit
@@ -115,7 +142,18 @@ class StatusMessage(bp.MessageBase):
     motor_rpm: int = 0 # 13bit
     target_rpm: int = 0 # 13bit
     # // Internal state
+    # Switches
+    switch_remote_control: bool = False # 1bit
+    switch_forward: bool = False # 1bit
+    switch_reverse: bool = False # 1bit
+    throttle_lever_rpm: int = 0 # 13bit
+    # Safety automata state
+    detected_movement: Union[int, DetectedMovement] = DetectedMovement.NO_MOVEMENT
+    # This field is a proxy to hold integer value of enum field 'detected_movement'
+    _enum_field_proxy__detected_movement: int = field(init=False, repr=False) # 2bit
+    # Speed control
     control_rpm: int = 0 # 13bit
+    brake_value: bool = False # 1bit
 
     def __post_init__(self):
         # initialize handling of enum field 'error' as `enum.IntEnum`
@@ -126,6 +164,10 @@ class StatusMessage(bp.MessageBase):
         if not isinstance(getattr(StatusMessage, "mode", False), property):
             self._enum_field_proxy__mode = self.mode
             StatusMessage.mode = property(StatusMessage._get_mode, StatusMessage._set_mode)  # type: ignore
+        # initialize handling of enum field 'detected_movement' as `enum.IntEnum`
+        if not isinstance(getattr(StatusMessage, "detected_movement", False), property):
+            self._enum_field_proxy__detected_movement = self.detected_movement
+            StatusMessage.detected_movement = property(StatusMessage._get_detected_movement, StatusMessage._set_detected_movement)  # type: ignore
 
     @staticmethod
     def dict_factory(kv_pairs):
@@ -145,6 +187,13 @@ class StatusMessage(bp.MessageBase):
     def _set_mode(self, val):
         """property setter for enum proxy field"""
         self._enum_field_proxy__mode = val
+    def _get_detected_movement(self) -> DetectedMovement:
+        """property getter for enum proxy field"""
+        return DetectedMovement(self._enum_field_proxy__detected_movement)
+
+    def _set_detected_movement(self, val):
+        """property setter for enum proxy field"""
+        self._enum_field_proxy__detected_movement = val
 
     def bp_processor(self) -> bp.Processor:
         field_processors: List[bp.Processor] = [
@@ -156,9 +205,15 @@ class StatusMessage(bp.MessageBase):
             bp.MessageFieldProcessor(20, bp_processor_Mode()),
             bp.MessageFieldProcessor(21, bp.Uint(13)),
             bp.MessageFieldProcessor(22, bp.Uint(13)),
-            bp.MessageFieldProcessor(31, bp.Uint(13)),
+            bp.MessageFieldProcessor(31, bp.Bool()),
+            bp.MessageFieldProcessor(32, bp.Bool()),
+            bp.MessageFieldProcessor(33, bp.Bool()),
+            bp.MessageFieldProcessor(34, bp.Uint(13)),
+            bp.MessageFieldProcessor(35, bp_processor_DetectedMovement()),
+            bp.MessageFieldProcessor(36, bp.Uint(13)),
+            bp.MessageFieldProcessor(37, bp.Bool()),
         ]
-        return bp.MessageProcessor(False, 86, field_processors)
+        return bp.MessageProcessor(False, 105, field_processors)
 
     def bp_set_byte(self, di: bp.DataIndexer, lshift: int, b: bp.byte) -> None:
         if di.field_number == 1:
@@ -178,7 +233,19 @@ class StatusMessage(bp.MessageBase):
         if di.field_number == 22:
             self.target_rpm |= (int(b) << lshift)
         if di.field_number == 31:
+            self.switch_remote_control = bool(b)
+        if di.field_number == 32:
+            self.switch_forward = bool(b)
+        if di.field_number == 33:
+            self.switch_reverse = bool(b)
+        if di.field_number == 34:
+            self.throttle_lever_rpm |= (int(b) << lshift)
+        if di.field_number == 35:
+            self.detected_movement |= (DetectedMovement(b) << lshift)
+        if di.field_number == 36:
             self.control_rpm |= (int(b) << lshift)
+        if di.field_number == 37:
+            self.brake_value = bool(b)
         return
 
     def bp_get_byte(self, di: bp.DataIndexer, rshift: int) -> bp.byte:
@@ -199,7 +266,19 @@ class StatusMessage(bp.MessageBase):
         if di.field_number == 22:
             return (self.target_rpm >> rshift) & 255
         if di.field_number == 31:
+            return (int(self.switch_remote_control) >> rshift) & 255
+        if di.field_number == 32:
+            return (int(self.switch_forward) >> rshift) & 255
+        if di.field_number == 33:
+            return (int(self.switch_reverse) >> rshift) & 255
+        if di.field_number == 34:
+            return (self.throttle_lever_rpm >> rshift) & 255
+        if di.field_number == 35:
+            return (self.detected_movement >> rshift) & 255
+        if di.field_number == 36:
             return (self.control_rpm >> rshift) & 255
+        if di.field_number == 37:
+            return (int(self.brake_value) >> rshift) & 255
         return bp.byte(0)  # Won't reached
 
     def bp_get_accessor(self, di: bp.DataIndexer) -> bp.Accessor:

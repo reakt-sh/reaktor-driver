@@ -1,0 +1,244 @@
+#hostcode-c-header "#include \"modes.h\""
+//#hostcode-c-header "enum DriveMode {NEUTRAL,DRIVE_FORWARD,DRIVE_REVERSE,PARKING,EMERGENCY_STOP};"
+
+#semantics "lean"
+
+@IntegerClockType
+@NoSleep
+scchart SafeDriveModeControl {
+
+    // Manual control inputs
+    input bool manualSwitchForward, manualSwitchReverse
+    input int manualTargetSpeedRPM
+    input bool manualSwitchRemoteControl
+
+    // Remote control inputs
+    input ref DriveMode remoteDriveMode
+    input int remoteTargetSpeedRPM
+
+    // System-internal inputs
+    input int currentSpeedRPM
+    input bool remoteControlConnected
+    input bool issueEmergencyStop
+    
+    // Config inputs
+    input const int RECOVERY_TIME
+    input const int MOVEMENT_THRESHOLD_RPM
+
+    // Safe control outputs
+    output bool remoteControlActive = false
+    output ref DriveMode safeDriveMode = DriveMode.PARKING
+    output int safeTargetSpeedRPM = 0
+    
+    // Error outputs
+    output bool errorConflictingModeSwitch = false
+    output bool errorMovingWhileParking = false
+    output bool errorDirectionConflictsMovement = false
+    output bool errorDirectionConflictsUnknownMovement = false
+    output bool errorEmergencyNotYetRecoverable = false
+
+    // External types
+    host enum DriveMode {
+        NEUTRAL,
+        DRIVE_FORWARD,
+        DRIVE_REVERSE,
+        PARKING,
+        EMERGENCY_STOP
+    }
+
+    // Internal shared variables
+    ref DriveMode manualDriveModeInferred = DriveMode.PARKING
+    ref DriveMode requestedDriveMode = DriveMode.PARKING
+    int requestedTargetSpeedRPM = 0
+    bool isMoving = false, isMovingForward = false, isMovingReverse = false
+    
+    // Reset errors (at each start)
+    during do errorConflictingModeSwitch = false;
+              errorMovingWhileParking = false;
+              errorDirectionConflictsMovement = false;
+              errorDirectionConflictsUnknownMovement = false;
+              errorEmergencyNotYetRecoverable = false
+
+    /*
+     * Convert the inputs for the manual control hardware into a logical drive mode
+     */
+    region ManualDriveModeInference {
+        initial connector state Switch
+        immediate if manualSwitchForward && manualSwitchReverse go to HardwareMalfunction
+        immediate if manualSwitchForward go to Forward
+        immediate if manualSwitchReverse go to Reverse
+        immediate go to Parking
+
+        state Parking {
+          entry do manualDriveModeInferred = DriveMode.PARKING
+        }
+        if manualSwitchForward || manualSwitchReverse go to Switch
+
+        state Forward {
+          entry do manualDriveModeInferred = DriveMode.DRIVE_FORWARD
+        }
+        if !manualSwitchForward || manualSwitchReverse go to Switch
+
+        state Reverse {
+          entry do manualDriveModeInferred = DriveMode.DRIVE_REVERSE
+        }
+        if manualSwitchForward || !manualSwitchReverse go to Switch
+
+        state HardwareMalfunction {
+          entry do manualDriveModeInferred = DriveMode.EMERGENCY_STOP
+          immediate during do errorConflictingModeSwitch = true
+        }
+        if !manualSwitchForward || !manualSwitchReverse abort to Switch
+    }
+
+    /*
+     * Detect movement and its direction based on sent commands
+     */
+    region VehicleMovement {
+        initial state NoMovement {
+            entry do isMoving = false; isMovingForward = false; isMovingReverse = false
+        }
+        if currentSpeedRPM > MOVEMENT_THRESHOLD_RPM go to Movement
+
+        state Movement {
+            entry do isMoving = true
+
+            region Direction {
+                initial connector state Detect
+                immediate if safeTargetSpeedRPM > 0 && safeDriveMode == DriveMode.DRIVE_FORWARD go to Forward
+                immediate if safeTargetSpeedRPM > 0 && safeDriveMode == DriveMode.DRIVE_REVERSE go to Reverse
+                immediate go to Unknown
+
+                state Unknown
+                go to Detect
+
+                state Forward {
+                  entry do isMovingForward = true
+                }
+
+                state Reverse {
+                  entry do isMovingReverse = true
+                }
+            }
+        }
+        if currentSpeedRPM < MOVEMENT_THRESHOLD_RPM abort to NoMovement
+    }
+
+    /*
+     * Secure switching between remote and manual control
+     */
+    region RemoteControlActivation {
+        initial state ManualControl {
+           bool safeToSwitch = false
+
+           entry do remoteControlActive = false
+           immediate during do requestedDriveMode = manualDriveModeInferred; requestedTargetSpeedRPM = manualTargetSpeedRPM
+
+           // To switch to remote control the vehicle must not move and get no movement orders from any control sources
+           during do safeToSwitch = !isMoving
+                && manualTargetSpeedRPM == 0
+                && remoteTargetSpeedRPM == 0
+                && (manualDriveModeInferred == DriveMode.NEUTRAL || manualDriveModeInferred == DriveMode.PARKING)
+                && (safeDriveMode == DriveMode.NEUTRAL || safeDriveMode == DriveMode.PARKING)
+                && (remoteDriveMode == DriveMode.NEUTRAL || remoteDriveMode == DriveMode.PARKING)
+        }
+        if manualSwitchRemoteControl && safeToSwitch go to RemoteControl
+
+        state RemoteControl {
+           entry do remoteControlActive = true
+           
+           region HandleRemoteControl {
+              initial connector state HasRemoteController
+              immediate if remoteControlConnected go to ApplyRemoteControlCommands
+              immediate go to AwaitConnection
+              
+              state ApplyRemoteControlCommands {
+                 immediate during do requestedDriveMode = remoteDriveMode; requestedTargetSpeedRPM = remoteTargetSpeedRPM
+              }
+              if !remoteControlConnected do issueEmergencyStop = true go to AwaitConnection
+              
+              state AwaitConnection {
+                 immediate during do requestedDriveMode = DriveMode.PARKING; requestedTargetSpeedRPM = 0
+              }
+              if remoteControlConnected go to ApplyRemoteControlCommands
+           }
+        }
+        if !manualSwitchRemoteControl go to ManualControl // Always allow taking manual control
+    }
+
+    /*
+     * Convert the inputs into a safe instructions for actuation
+     */
+    region SafeMode {
+        initial connector state SwitchMode
+        immediate if requestedDriveMode == DriveMode.EMERGENCY_STOP || issueEmergencyStop go to EmergencyStop
+        immediate if requestedDriveMode == DriveMode.NEUTRAL go to Neutral
+        immediate if requestedDriveMode == DriveMode.DRIVE_FORWARD go to CheckForward
+        immediate if requestedDriveMode == DriveMode.DRIVE_REVERSE go to CheckReverse
+        immediate if requestedDriveMode == DriveMode.PARKING go to Parking
+        immediate go to EmergencyStop
+
+        state Neutral {
+            entry do safeDriveMode = DriveMode.NEUTRAL
+            immediate during do safeTargetSpeedRPM = 0
+        }
+        if issueEmergencyStop || requestedDriveMode != DriveMode.NEUTRAL go to SwitchMode
+
+        connector state CheckForward
+        // Fwd: Good change
+        immediate if !isMoving || isMovingForward go to Forward
+        // Fwd: More permissive in manual control mode
+        immediate if isMoving && !isMovingReverse && !remoteControlActive go to Forward
+        // Fwd: Bad change
+        immediate go to EmergencyStop
+
+        state Forward {
+            entry do safeDriveMode = DriveMode.DRIVE_FORWARD
+            immediate during do safeTargetSpeedRPM = requestedTargetSpeedRPM
+        }
+        if issueEmergencyStop || requestedDriveMode != DriveMode.DRIVE_FORWARD go to SwitchMode
+
+        connector state CheckReverse
+        // Rev: Good change
+        immediate if !isMoving || isMovingReverse go to Reverse
+        // Rev: More permissive in manual control mode
+        immediate if isMoving && !isMovingForward && !remoteControlActive go to Reverse
+        // Fwd: Bad change
+        immediate go to EmergencyStop
+
+        state Reverse {
+            entry do safeDriveMode = DriveMode.DRIVE_REVERSE
+            immediate during do safeTargetSpeedRPM = requestedTargetSpeedRPM
+        }
+        if issueEmergencyStop || requestedDriveMode != DriveMode.DRIVE_REVERSE go to SwitchMode
+
+        state Parking {
+            entry do safeDriveMode = DriveMode.PARKING
+            entry do safeTargetSpeedRPM = 0
+
+            during do errorMovingWhileParking = isMoving
+        }
+        if issueEmergencyStop || !isMoving && requestedDriveMode != DriveMode.PARKING go to SwitchMode
+
+        state EmergencyStop {
+            entry do safeDriveMode = DriveMode.EMERGENCY_STOP; safeTargetSpeedRPM = 0
+            entry if requestedDriveMode == DriveMode.DRIVE_FORWARD && isMovingReverse do errorDirectionConflictsMovement = true
+            entry if requestedDriveMode == DriveMode.DRIVE_REVERSE && isMovingForward do errorDirectionConflictsMovement = true
+            entry if (requestedDriveMode == DriveMode.DRIVE_REVERSE || requestedDriveMode == DriveMode.DRIVE_FORWARD) && isMoving && !isMovingForward && !isMovingReverse do errorDirectionConflictsUnknownMovement = true
+
+            region Recovery {
+                clock c = 0
+
+                initial state Wait {
+                   entry do c = 0
+                   immediate during if requestedDriveMode != DriveMode.EMERGENCY_STOP do errorEmergencyNotYetRecoverable = true
+                }
+                if isMoving || requestedTargetSpeedRPM > 0 || issueEmergencyStop go to Wait
+                if c >= RECOVERY_TIME go to ReadyToRecover
+
+                final state ReadyToRecover
+            }
+        }
+        delayed if requestedDriveMode != DriveMode.EMERGENCY_STOP && !issueEmergencyStop join to SwitchMode
+    }
+}

@@ -2,7 +2,7 @@ _doc_: "Configuration parameters for the communication between driver and connec
 
 # Communication:
 comm_protocol_version:
-  value: 1
+  value: 2
   c_type: uint8_t
   comment: "Version number of the communication protocol."
 comm_serial_baudrate:

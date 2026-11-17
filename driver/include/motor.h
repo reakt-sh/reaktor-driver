@@ -1,11 +1,13 @@
 #pragma once
 
+#include <modes.h>
+
 /**
- * Setup the throttle handler.
+ * Setup the motor signals.
  *
  * @return true if the setup was successful
  */
-bool setupThrottleHandler();
+bool setupMotorSignals();
 
 /**
  * Sends the given speed in rpm as throttle to the motor controller.
@@ -22,9 +24,15 @@ void setMotorThrottle(int rpm);
 void checkMotorThrottle();
 
 /**
- * Reads the throttle lever value.
- * This is a mapping of the lever position to rpm.
+ * Set the brake signal to the given state.
  *
- * @retrun The desired rpm as set by the throttle lever
+ * @param engaged true to engage the brake, false to release
  */
-int readManualThrottle();
+void setBrakeSignal(bool engaged);
+
+/**
+ * Set the direction signal according to the given drive mode.
+ *
+ * @param mode the drive mode to set the signal for
+ */
+void setDirectionSignal(tDriveMode mode);

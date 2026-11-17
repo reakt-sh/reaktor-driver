@@ -7,8 +7,8 @@ MOTOR_ROOT_LOGGER = CONNECTOR_ROOT_LOGGER.getChild("motor")
 
 # pylint: disable=wrong-import-position
 from .connection import MotorConnection
-from .data import Control, Status, Mode, ErrorState, InternalState
+from .data import Control, Status, Mode, ErrorState, InternalState, DetectedMovement
 from ..errors import ConnectionProblem
 
-__all__ = ["MotorConnection", "Control", "Status", "Mode", "ErrorState", "InternalState", "ConnectionProblem"]
+__all__ = ["MotorConnection", "Control", "Status", "Mode", "DetectedMovement", "ErrorState", "InternalState", "ConnectionProblem"]
 
