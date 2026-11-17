@@ -13,7 +13,9 @@ error_comm_connection_not_established: 1
 error_comm_connection_not_established_message: "A control message was received without a successful connection handshake beforehand."
 error_remote_control_timeout: 2
 error_remote_control_timeout_message: "While in active remote control mode, no control (or heartbeat) message was received in the expected interval."
-error_hardware_no_throttle_dac: 3
+error_setup_failed: 3
+error_setup_failed_message: "Setup of the driver failed. System is not in operational state."
+error_hardware_no_throttle_dac: 4
 error_hardware_no_throttle_dac_message: "No connection to motor throttle control component (DAC via I2C)."
 error_modes_manual_mode_switch_conflicting: 5
 error_modes_manual_mode_switch_conflicting_message: "Hardware malfuntion in manual mode switch. Both directions are active."

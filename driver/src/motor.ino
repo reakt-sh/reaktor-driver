@@ -4,11 +4,10 @@
 // Generated code library
 #include <config_hardware.h>
 
-#include "throttle.h"
+#include "motor.h"
 
-#include "debug.h"
+#include "safety.h"
 #include "error.h"
-#include "mode.h"
 
 // Configuration
 /** Address on on I2C bus
@@ -20,10 +19,6 @@ const uint8_t DAC_ADDRESS = 0x62;
 // Conversion factor from RPM to DAC value
 // Assumes linear relation between voltage and motor speed, which is not fully the case
 const double RPM_CONVERSION_FACTOR = ((double) DAC_STEPS) / MOTOR_MAX_RPM;
-// Throttle lever deadzones
-const int MANUAL_THROTTLE_LOWER_DEADZONE_LIMIT = THROTTLE_LEVER_LOWER_DEADZONE * ADC_STEPS; // Lower deadzone limit in ADC steps
-const int MANUAL_THROTTLE_UPPER_DEADZONE_LIMIT = ADC_STEPS - (THROTTLE_LEVER_UPPER_DEADZONE * ADC_STEPS); // Upper deadzone limit in ADC steps
-const int MANUAL_THROTTLE_EFFECTIVE_RANGE = MANUAL_THROTTLE_UPPER_DEADZONE_LIMIT - MANUAL_THROTTLE_LOWER_DEADZONE_LIMIT; // Effective range in ADC steps
 
 // Variables
 unsigned int lastSetRPM = 0;
@@ -34,7 +29,19 @@ Adafruit_MCP4725 dac;
 // ====================
 // API
 
-bool setupThrottleHandler() {
+bool setupMotorSignals() {
+    // Configure digital IO pins
+    pinMode(BOARD_PIN_OUT_MOTOR_FORWARD, OUTPUT);
+    pinMode(BOARD_PIN_OUT_MOTOR_REVERSE, OUTPUT);
+    pinMode(BOARD_PIN_OUT_MOTOR_BRAKE, OUTPUT);
+    pinMode(BOARD_PIN_OUT_MOTOR_REGENERATIVE, OUTPUT);
+
+    // Set initial output states
+    digitalWrite(BOARD_PIN_OUT_MOTOR_FORWARD, LOW);
+    digitalWrite(BOARD_PIN_OUT_MOTOR_REVERSE, LOW);
+    digitalWrite(BOARD_PIN_OUT_MOTOR_BRAKE, LOW);
+    digitalWrite(BOARD_PIN_OUT_MOTOR_REGENERATIVE, LOW);
+
     // Connect to device
     bool success = dac.begin(DAC_ADDRESS);
 
@@ -73,23 +80,28 @@ void checkMotorThrottle() {
     // TODO Check if DAC produces the correct voltage (in time) and raise error if not, also stop vehicle
 }
 
-int readManualThrottle() {
-    int sample = analogRead(BOARD_PIN_IN_MANUAL_THROTTLE); // Read the analog input
-    // Apply deadzone
-    if (sample <= MANUAL_THROTTLE_LOWER_DEADZONE_LIMIT) {
-        return 0;
-    } else if (sample >= MANUAL_THROTTLE_UPPER_DEADZONE_LIMIT) {
-        return MOTOR_MAX_RPM;
-    } else {
-        // Convert to relative position (0.0 - 1.0) in deadzone-free area
-        float relative_pos = ((float) sample) / MANUAL_THROTTLE_EFFECTIVE_RANGE;
-        // Linear mapping to RPM
-        int rpm = relative_pos * MOTOR_MAX_RPM;
-
-        return rpm;
-    }
+void setBrakeSignal(bool engaged) {
+    digitalWrite(BOARD_PIN_OUT_MOTOR_BRAKE, engaged ? HIGH : LOW);
 }
 
+void setDirectionSignal(tDriveMode mode) {
+    switch (mode) {
+        case DRIVE_FORWARD:
+            digitalWrite(BOARD_PIN_OUT_MOTOR_FORWARD, HIGH);
+            digitalWrite(BOARD_PIN_OUT_MOTOR_REVERSE, LOW);
+            break;
+        case DRIVE_REVERSE:
+            digitalWrite(BOARD_PIN_OUT_MOTOR_FORWARD, LOW);
+            digitalWrite(BOARD_PIN_OUT_MOTOR_REVERSE, HIGH);
+            break;
+        default: // all other modes
+            digitalWrite(BOARD_PIN_OUT_MOTOR_FORWARD, LOW);
+            digitalWrite(BOARD_PIN_OUT_MOTOR_REVERSE, LOW);
+            break;
+    }
+    // FIXME just for indicating as long we dont have a status LED:
+    digitalWrite(BOARD_PIN_OUT_MOTOR_REGENERATIVE, mode == EMERGENCY_STOP ? HIGH : LOW);
+}
 
 // ====================
 // INTERNAL

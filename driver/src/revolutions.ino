@@ -5,8 +5,6 @@
 
 #include "revolutions.h"
 
-#include "debug.h"
-
 // Variables
 volatile unsigned long revolutionDuration = 0; // Milliseconds of the last motor revolution
 volatile unsigned long lastEdgeTime = 0; // Milliseconds since last signal edge

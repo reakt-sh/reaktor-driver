@@ -38,12 +38,12 @@ static inline void _scc_R3S7R0S0_Wait_tick(TickData *context) {
         // Entry
         context->_SafeDriveModeControl_local__region0_Recovery_c = 0;
         if (context->requestedDriveMode != EMERGENCY_STOP) {
-            registerError(ERROR_MODES_EMERGENCY_NOT_YET_RECOVERABLE);
+            context->errorEmergencyNotYetRecoverable = 1;
         }
     } else {
         // During
         if (context->requestedDriveMode != EMERGENCY_STOP) {
-            registerError(ERROR_MODES_EMERGENCY_NOT_YET_RECOVERABLE);
+            context->errorEmergencyNotYetRecoverable = 1;
         }
         context->_SafeDriveModeControl_local__region0_Recovery_c += context->deltaT;
     }
@@ -51,13 +51,13 @@ static inline void _scc_R3S7R0S0_Wait_tick(TickData *context) {
     context->_state.R3S7R0S0_Wait_entry = 0;
 }
 
-/*
+/* 
  * Region Recovery (R3S7R0)
  * SafeDriveModeControl -> SafeMode -> EmergencyStop -> Recovery
  */
 static inline void _scc_R3S7R0_Recovery_reset(TickData *context) {
     context->_state.R3S7R0_Recovery_activeState = _SCC_R3S7R0S0_WAIT;
-
+    
     // Reset states
     _scc_R3S7R0S0_Wait_reset(context);
     _scc_R3S7R0S1_ReadyToRecover_reset(context);
@@ -75,7 +75,7 @@ static inline void _scc_R3S7R0_Recovery_tick(TickData *context) {
                 _scc_R3S7R0S0_Wait_reset(context);
                 _scc_R3S7R0S0_Wait_tick(context);
             }
-            else if (context->_SafeDriveModeControl_local__region0_Recovery_c >= DRIVER_MODES_EMERGENCY_RECOVERY_TIME_MS) { // Priority 2
+            else if (context->_SafeDriveModeControl_local__region0_Recovery_c >= context->RECOVERY_TIME) { // Priority 2
                 // Go to state ReadyToRecover (R3S7R0S1)
                 context->_state.R3S7R0_Recovery_activeState = _SCC_R3S7R0S1_READYTORECOVER;
                 _scc_R3S7R0S1_ReadyToRecover_reset(context);
@@ -105,18 +105,18 @@ static inline void _scc_R3S7_EmergencyStop_tick(TickData *context) {
         context->safeDriveMode = EMERGENCY_STOP;
         context->safeTargetSpeedRPM = 0;
         if (context->requestedDriveMode == DRIVE_FORWARD && context->isMovingReverse) {
-            registerError(ERROR_MODES_DIRECTION_CONFLICTS_MOVEMENT);
+            context->errorDirectionConflictsMovement = 1;
         }
         if (context->requestedDriveMode == DRIVE_REVERSE && context->isMovingForward) {
-            registerError(ERROR_MODES_DIRECTION_CONFLICTS_MOVEMENT);
+            context->errorDirectionConflictsMovement = 1;
         }
         if ((context->requestedDriveMode == DRIVE_REVERSE || context->requestedDriveMode == DRIVE_FORWARD) && context->isMoving && !context->isMovingForward && !context->isMovingReverse) {
-            registerError(ERROR_MODES_DIRECTION_CONFLICTS_UNKNOWN_MOVEMENT);
+            context->errorDirectionConflictsUnknownMovement = 1;
         }
-
+        
         // Only execute initial states upon entry to prevent immediate transitioning (except for initial connectors)
         _scc_R3S7R0S0_Wait_tick(context);
-
+        
     } else {
         // Regions
         _scc_R3S7R0_Recovery_tick(context);
@@ -139,9 +139,7 @@ static inline void _scc_R3S6_Parking_tick(TickData *context) {
         context->safeTargetSpeedRPM = 0;
     } else {
         // During
-        if (context->isMoving) {
-            registerError(ERROR_MODES_VEHICLE_MOVING_WHILE_PARKING);
-        }
+        context->errorMovingWhileParking = context->isMoving;
     }
     // Disable entry behavior
     context->_state.R3S6_Parking_entry = 0;
@@ -207,13 +205,13 @@ static inline void _scc_R3S1_Neutral_tick(TickData *context) {
     context->_state.R3S1_Neutral_entry = 0;
 }
 
-/*
+/* 
  * Region SafeMode (R3)
  * SafeDriveModeControl -> SafeMode
  */
 static inline void _scc_R3_SafeMode_reset(TickData *context) {
     context->_state.R3_SafeMode_activeState = _SCC_R3S0_SWITCHMODE;
-
+    
     // Reset states
     _scc_R3S1_Neutral_reset(context);
     _scc_R3S3_Forward_reset(context);
@@ -229,7 +227,7 @@ static inline void _scc_R3_SafeMode_tick(TickData *context) {
             // Execute active state
             _scc_R3S1_Neutral_tick(context);
             // Check non-preemptive transitions
-            if (context->requestedDriveMode != NEUTRAL) { // Priority 1
+            if (context->issueEmergencyStop || context->requestedDriveMode != NEUTRAL) { // Priority 1
                 // Go to connector SwitchMode (R3S0)
                 context->_state.R3_SafeMode_activeState = _SCC_R3S0_SWITCHMODE;
                 handle_connector = 1;
@@ -239,7 +237,7 @@ static inline void _scc_R3_SafeMode_tick(TickData *context) {
             // Execute active state
             _scc_R3S3_Forward_tick(context);
             // Check non-preemptive transitions
-            if (context->requestedDriveMode != DRIVE_FORWARD) { // Priority 1
+            if (context->issueEmergencyStop || context->requestedDriveMode != DRIVE_FORWARD) { // Priority 1
                 // Go to connector SwitchMode (R3S0)
                 context->_state.R3_SafeMode_activeState = _SCC_R3S0_SWITCHMODE;
                 handle_connector = 1;
@@ -249,7 +247,7 @@ static inline void _scc_R3_SafeMode_tick(TickData *context) {
             // Execute active state
             _scc_R3S5_Reverse_tick(context);
             // Check non-preemptive transitions
-            if (context->requestedDriveMode != DRIVE_REVERSE) { // Priority 1
+            if (context->issueEmergencyStop || context->requestedDriveMode != DRIVE_REVERSE) { // Priority 1
                 // Go to connector SwitchMode (R3S0)
                 context->_state.R3_SafeMode_activeState = _SCC_R3S0_SWITCHMODE;
                 handle_connector = 1;
@@ -259,7 +257,7 @@ static inline void _scc_R3_SafeMode_tick(TickData *context) {
             // Execute active state
             _scc_R3S6_Parking_tick(context);
             // Check non-preemptive transitions
-            if (!context->isMoving && context->requestedDriveMode != PARKING) { // Priority 1
+            if (context->issueEmergencyStop || (!context->isMoving && context->requestedDriveMode != PARKING)) { // Priority 1
                 // Go to connector SwitchMode (R3S0)
                 context->_state.R3_SafeMode_activeState = _SCC_R3S0_SWITCHMODE;
                 handle_connector = 1;
@@ -328,7 +326,7 @@ static inline void _scc_R3_SafeMode_tick(TickData *context) {
                 _scc_R3S3_Forward_reset(context);
                 _scc_R3S3_Forward_tick(context);
             }
-            else if (context->isMoving && !context->isMovingReverse && !context->safeRemoteControl) { // Priority 2
+            else if (context->isMoving && !context->isMovingReverse && !context->remoteControlActive) { // Priority 2
                 // Go to state Forward (R3S3)
                 context->_state.R3_SafeMode_activeState = _SCC_R3S3_FORWARD;
                 _scc_R3S3_Forward_reset(context);
@@ -348,7 +346,7 @@ static inline void _scc_R3_SafeMode_tick(TickData *context) {
                 _scc_R3S5_Reverse_reset(context);
                 _scc_R3S5_Reverse_tick(context);
             }
-            else if (context->isMoving && !context->isMovingForward && !context->safeRemoteControl) { // Priority 2
+            else if (context->isMoving && !context->isMovingForward && !context->remoteControlActive) { // Priority 2
                 // Go to state Reverse (R3S5)
                 context->_state.R3_SafeMode_activeState = _SCC_R3S5_REVERSE;
                 _scc_R3S5_Reverse_reset(context);
@@ -365,22 +363,132 @@ static inline void _scc_R3_SafeMode_tick(TickData *context) {
 }
 
 /*
- * State RemoteControl (R2S1)
- * SafeDriveModeControl -> RemoteControlActivation -> RemoteControl
+ * State AwaitConnection (R2S1R0S2)
+ * SafeDriveModeControl -> RemoteControlActivation -> RemoteControl -> HandleRemoteControl -> AwaitConnection
  */
-static inline void _scc_R2S1_RemoteControl_reset(TickData *context) {
-    context->_state.R2S1_RemoteControl_entry = 1;
+static inline void _scc_R2S1R0S2_AwaitConnection_reset(TickData *context) {
+    context->_state.R2S1R0S2_AwaitConnection_entry = 1;
 }
-static inline void _scc_R2S1_RemoteControl_tick(TickData *context) {
-    if (context->_state.R2S1_RemoteControl_entry) {
+static inline void _scc_R2S1R0S2_AwaitConnection_tick(TickData *context) {
+    if (context->_state.R2S1R0S2_AwaitConnection_entry) {
         // Entry
-        context->safeRemoteControl = 1;
+        context->requestedDriveMode = PARKING;
+        context->requestedTargetSpeedRPM = 0;
+    } else {
+        // During
+        context->requestedDriveMode = PARKING;
+        context->requestedTargetSpeedRPM = 0;
+    }
+    // Disable entry behavior
+    context->_state.R2S1R0S2_AwaitConnection_entry = 0;
+}
+
+/*
+ * State ApplyRemoteControlCommands (R2S1R0S1)
+ * SafeDriveModeControl -> RemoteControlActivation -> RemoteControl -> HandleRemoteControl -> ApplyRemoteControlCommands
+ */
+static inline void _scc_R2S1R0S1_ApplyRemoteControlCommands_reset(TickData *context) {
+    context->_state.R2S1R0S1_ApplyRemoteControlCommands_entry = 1;
+}
+static inline void _scc_R2S1R0S1_ApplyRemoteControlCommands_tick(TickData *context) {
+    if (context->_state.R2S1R0S1_ApplyRemoteControlCommands_entry) {
+        // Entry
         context->requestedDriveMode = context->remoteDriveMode;
         context->requestedTargetSpeedRPM = context->remoteTargetSpeedRPM;
     } else {
         // During
         context->requestedDriveMode = context->remoteDriveMode;
         context->requestedTargetSpeedRPM = context->remoteTargetSpeedRPM;
+    }
+    // Disable entry behavior
+    context->_state.R2S1R0S1_ApplyRemoteControlCommands_entry = 0;
+}
+
+/* 
+ * Region HandleRemoteControl (R2S1R0)
+ * SafeDriveModeControl -> RemoteControlActivation -> RemoteControl -> HandleRemoteControl
+ */
+static inline void _scc_R2S1R0_HandleRemoteControl_reset(TickData *context) {
+    context->_state.R2S1R0_HandleRemoteControl_activeState = _SCC_R2S1R0S0_HASREMOTECONTROLLER;
+    
+    // Reset states
+    _scc_R2S1R0S1_ApplyRemoteControlCommands_reset(context);
+    _scc_R2S1R0S2_AwaitConnection_reset(context);
+}
+static inline void _scc_R2S1R0_HandleRemoteControl_tick(TickData *context) {
+    char handle_connector = 0;
+    // States
+    switch (context->_state.R2S1R0_HandleRemoteControl_activeState) {
+        case _SCC_R2S1R0S1_APPLYREMOTECONTROLCOMMANDS: // ApplyRemoteControlCommands
+            // Execute active state
+            _scc_R2S1R0S1_ApplyRemoteControlCommands_tick(context);
+            // Check non-preemptive transitions
+            if (!context->remoteControlConnected) { // Priority 1
+                // Effects
+                context->issueEmergencyStop = 1;
+                
+                // Go to state AwaitConnection (R2S1R0S2)
+                context->_state.R2S1R0_HandleRemoteControl_activeState = _SCC_R2S1R0S2_AWAITCONNECTION;
+                _scc_R2S1R0S2_AwaitConnection_reset(context);
+                _scc_R2S1R0S2_AwaitConnection_tick(context);
+            }
+            break;
+        case _SCC_R2S1R0S2_AWAITCONNECTION: // AwaitConnection
+            // Execute active state
+            _scc_R2S1R0S2_AwaitConnection_tick(context);
+            // Check non-preemptive transitions
+            if (context->remoteControlConnected) { // Priority 1
+                // Go to state ApplyRemoteControlCommands (R2S1R0S1)
+                context->_state.R2S1R0_HandleRemoteControl_activeState = _SCC_R2S1R0S1_APPLYREMOTECONTROLCOMMANDS;
+                _scc_R2S1R0S1_ApplyRemoteControlCommands_reset(context);
+                _scc_R2S1R0S1_ApplyRemoteControlCommands_tick(context);
+            }
+            break;
+        case _SCC_R2S1R0S0_HASREMOTECONTROLLER:
+            // Intentional fallthrough
+            // Connectors are transient and handled separately to enable instantaneous traversal
+            handle_connector = 1;
+            break;
+    }
+    // Instantaneous connector traversal
+    if (handle_connector) {
+        if (context->_state.R2S1R0_HandleRemoteControl_activeState == _SCC_R2S1R0S0_HASREMOTECONTROLLER) {  // HasRemoteController
+            if (context->remoteControlConnected) { // Priority 1
+                // Go to state ApplyRemoteControlCommands (R2S1R0S1)
+                context->_state.R2S1R0_HandleRemoteControl_activeState = _SCC_R2S1R0S1_APPLYREMOTECONTROLCOMMANDS;
+                _scc_R2S1R0S1_ApplyRemoteControlCommands_reset(context);
+                _scc_R2S1R0S1_ApplyRemoteControlCommands_tick(context);
+            }
+            else if (1) { // Priority 2
+                // Go to state AwaitConnection (R2S1R0S2)
+                context->_state.R2S1R0_HandleRemoteControl_activeState = _SCC_R2S1R0S2_AWAITCONNECTION;
+                _scc_R2S1R0S2_AwaitConnection_reset(context);
+                _scc_R2S1R0S2_AwaitConnection_tick(context);
+            }
+        }
+    }
+}
+
+/*
+ * State RemoteControl (R2S1)
+ * SafeDriveModeControl -> RemoteControlActivation -> RemoteControl
+ */
+static inline void _scc_R2S1_RemoteControl_reset(TickData *context) {
+    context->_state.R2S1_RemoteControl_entry = 1;
+    // Reset regions
+    _scc_R2S1R0_HandleRemoteControl_reset(context);
+}
+static inline void _scc_R2S1_RemoteControl_tick(TickData *context) {
+    if (context->_state.R2S1_RemoteControl_entry) {
+        // Entry
+        context->remoteControlActive = 1;
+        
+        // Only execute initial states upon entry to prevent immediate transitioning (except for initial connectors)
+        _scc_R2S1R0_HandleRemoteControl_tick(context);
+        
+    } else {
+        // Regions
+        _scc_R2S1R0_HandleRemoteControl_tick(context);
     }
     // Disable entry behavior
     context->_state.R2S1_RemoteControl_entry = 0;
@@ -397,7 +505,7 @@ static inline void _scc_R2S0_ManualControl_tick(TickData *context) {
     if (context->_state.R2S0_ManualControl_entry) {
         // Entry
         context->_SafeDriveModeControl_local_safeToSwitch = 0;
-        context->safeRemoteControl = 0;
+        context->remoteControlActive = 0;
         context->requestedDriveMode = context->manualDriveModeInferred;
         context->requestedTargetSpeedRPM = context->manualTargetSpeedRPM;
     } else {
@@ -410,13 +518,13 @@ static inline void _scc_R2S0_ManualControl_tick(TickData *context) {
     context->_state.R2S0_ManualControl_entry = 0;
 }
 
-/*
+/* 
  * Region RemoteControlActivation (R2)
  * SafeDriveModeControl -> RemoteControlActivation
  */
 static inline void _scc_R2_RemoteControlActivation_reset(TickData *context) {
     context->_state.R2_RemoteControlActivation_activeState = _SCC_R2S0_MANUALCONTROL;
-
+    
     // Reset states
     _scc_R2S0_ManualControl_reset(context);
     _scc_R2S1_RemoteControl_reset(context);
@@ -483,13 +591,13 @@ static inline void _scc_R1S1R0S2_Forward_tick(TickData *context) {
     context->_state.R1S1R0S2_Forward_entry = 0;
 }
 
-/*
+/* 
  * Region Direction (R1S1R0)
  * SafeDriveModeControl -> VehicleMovement -> Movement -> Direction
  */
 static inline void _scc_R1S1R0_Direction_reset(TickData *context) {
     context->_state.R1S1R0_Direction_activeState = _SCC_R1S1R0S0_DETECT;
-
+    
     // Reset states
     _scc_R1S1R0S2_Forward_reset(context);
     _scc_R1S1R0S3_Reverse_reset(context);
@@ -556,10 +664,10 @@ static inline void _scc_R1S1_Movement_tick(TickData *context) {
     if (context->_state.R1S1_Movement_entry) {
         // Entry
         context->isMoving = 1;
-
+        
         // Only execute initial states upon entry to prevent immediate transitioning (except for initial connectors)
         _scc_R1S1R0_Direction_tick(context);
-
+        
     } else {
         // Regions
         _scc_R1S1R0_Direction_tick(context);
@@ -587,13 +695,13 @@ static inline void _scc_R1S0_NoMovement_tick(TickData *context) {
     context->_state.R1S0_NoMovement_entry = 0;
 }
 
-/*
+/* 
  * Region VehicleMovement (R1)
  * SafeDriveModeControl -> VehicleMovement
  */
 static inline void _scc_R1_VehicleMovement_reset(TickData *context) {
     context->_state.R1_VehicleMovement_activeState = _SCC_R1S0_NOMOVEMENT;
-
+    
     // Reset states
     _scc_R1S0_NoMovement_reset(context);
     _scc_R1S1_Movement_reset(context);
@@ -605,7 +713,7 @@ static inline void _scc_R1_VehicleMovement_tick(TickData *context) {
             // Execute active state
             _scc_R1S0_NoMovement_tick(context);
             // Check non-preemptive transitions
-            if (context->currentSpeedRPM > DRIVER_MODES_MOVEMENT_THRESHOLD_RPM) { // Priority 1
+            if (context->currentSpeedRPM > context->MOVEMENT_THRESHOLD_RPM) { // Priority 1
                 // Go to state Movement (R1S1)
                 context->_state.R1_VehicleMovement_activeState = _SCC_R1S1_MOVEMENT;
                 _scc_R1S1_Movement_reset(context);
@@ -614,7 +722,7 @@ static inline void _scc_R1_VehicleMovement_tick(TickData *context) {
             break;
         case _SCC_R1S1_MOVEMENT: // Movement
             // Check preemptive transitions (strong aborts)
-            if (context->currentSpeedRPM < DRIVER_MODES_MOVEMENT_THRESHOLD_RPM) { // Priority 1
+            if (context->currentSpeedRPM < context->MOVEMENT_THRESHOLD_RPM) { // Priority 1
                 // Go to state NoMovement (R1S0)
                 context->_state.R1_VehicleMovement_activeState = _SCC_R1S0_NOMOVEMENT;
                 _scc_R1S0_NoMovement_reset(context);
@@ -638,10 +746,10 @@ static inline void _scc_R0S4_HardwareMalfunction_tick(TickData *context) {
     if (context->_state.R0S4_HardwareMalfunction_entry) {
         // Entry
         context->manualDriveModeInferred = EMERGENCY_STOP;
-        registerError(ERROR_MODES_MANUAL_MODE_SWITCH_CONFLICTING);
+        context->errorConflictingModeSwitch = 1;
     } else {
         // During
-        registerError(ERROR_MODES_MANUAL_MODE_SWITCH_CONFLICTING);
+        context->errorConflictingModeSwitch = 1;
     }
     // Disable entry behavior
     context->_state.R0S4_HardwareMalfunction_entry = 0;
@@ -682,31 +790,31 @@ static inline void _scc_R0S2_Forward_tick(TickData *context) {
 }
 
 /*
- * State Neutral (R0S1)
- * SafeDriveModeControl -> ManualDriveModeInference -> Neutral
+ * State Parking (R0S1)
+ * SafeDriveModeControl -> ManualDriveModeInference -> Parking
  */
-static inline void _scc_R0S1_Neutral_reset(TickData *context) {
-    context->_state.R0S1_Neutral_entry = 1;
+static inline void _scc_R0S1_Parking_reset(TickData *context) {
+    context->_state.R0S1_Parking_entry = 1;
 }
-static inline void _scc_R0S1_Neutral_tick(TickData *context) {
-    if (context->_state.R0S1_Neutral_entry) {
+static inline void _scc_R0S1_Parking_tick(TickData *context) {
+    if (context->_state.R0S1_Parking_entry) {
         // Entry
-        context->manualDriveModeInferred = NEUTRAL;
+        context->manualDriveModeInferred = PARKING;
     } else {
     }
     // Disable entry behavior
-    context->_state.R0S1_Neutral_entry = 0;
+    context->_state.R0S1_Parking_entry = 0;
 }
 
-/*
+/* 
  * Region ManualDriveModeInference (R0)
  * SafeDriveModeControl -> ManualDriveModeInference
  */
 static inline void _scc_R0_ManualDriveModeInference_reset(TickData *context) {
     context->_state.R0_ManualDriveModeInference_activeState = _SCC_R0S0_SWITCH;
-
+    
     // Reset states
-    _scc_R0S1_Neutral_reset(context);
+    _scc_R0S1_Parking_reset(context);
     _scc_R0S2_Forward_reset(context);
     _scc_R0S3_Reverse_reset(context);
     _scc_R0S4_HardwareMalfunction_reset(context);
@@ -715,9 +823,9 @@ static inline void _scc_R0_ManualDriveModeInference_tick(TickData *context) {
     char handle_connector = 0;
     // States
     switch (context->_state.R0_ManualDriveModeInference_activeState) {
-        case _SCC_R0S1_NEUTRAL: // Neutral
+        case _SCC_R0S1_PARKING: // Parking
             // Execute active state
-            _scc_R0S1_Neutral_tick(context);
+            _scc_R0S1_Parking_tick(context);
             // Check non-preemptive transitions
             if (context->manualSwitchForward || context->manualSwitchReverse) { // Priority 1
                 // Go to connector Switch (R0S0)
@@ -784,17 +892,17 @@ static inline void _scc_R0_ManualDriveModeInference_tick(TickData *context) {
                 _scc_R0S3_Reverse_tick(context);
             }
             else if (1) { // Priority 4
-                // Go to state Neutral (R0S1)
-                context->_state.R0_ManualDriveModeInference_activeState = _SCC_R0S1_NEUTRAL;
-                _scc_R0S1_Neutral_reset(context);
-                _scc_R0S1_Neutral_tick(context);
+                // Go to state Parking (R0S1)
+                context->_state.R0_ManualDriveModeInference_activeState = _SCC_R0S1_PARKING;
+                _scc_R0S1_Parking_reset(context);
+                _scc_R0S1_Parking_tick(context);
             }
         }
     }
 }
 
 /*
- * State SafeDriveModeControl
+ * State SafeDriveModeControl 
  */
 static inline void _scc_SafeDriveModeControl_reset(TickData *context) {
     context->_state.SafeDriveModeControl_entry = 1;
@@ -807,24 +915,36 @@ static inline void _scc_SafeDriveModeControl_reset(TickData *context) {
 static inline void _scc_SafeDriveModeControl_tick(TickData *context) {
     if (context->_state.SafeDriveModeControl_entry) {
         // Entry
-        context->safeRemoteControl = 0;
-        context->safeDriveMode = NEUTRAL;
+        context->remoteControlActive = 0;
+        context->safeDriveMode = PARKING;
         context->safeTargetSpeedRPM = 0;
-        context->manualDriveModeInferred = NEUTRAL;
-        context->requestedDriveMode = NEUTRAL;
+        context->errorConflictingModeSwitch = 0;
+        context->errorMovingWhileParking = 0;
+        context->errorDirectionConflictsMovement = 0;
+        context->errorDirectionConflictsUnknownMovement = 0;
+        context->errorEmergencyNotYetRecoverable = 0;
+        context->manualDriveModeInferred = PARKING;
+        context->requestedDriveMode = PARKING;
         context->requestedTargetSpeedRPM = 0;
         context->isMoving = 0;
         context->isMovingForward = 0;
         context->isMovingReverse = 0;
         context->deltaT = 0;
-
+        
         // Only execute initial states upon entry to prevent immediate transitioning (except for initial connectors)
         _scc_R0_ManualDriveModeInference_tick(context);
         _scc_R1S0_NoMovement_tick(context);
         _scc_R2S0_ManualControl_tick(context);
         _scc_R3_SafeMode_tick(context);
-
+        
     } else {
+        // During
+        context->errorConflictingModeSwitch = 0;
+        context->errorMovingWhileParking = 0;
+        context->errorDirectionConflictsMovement = 0;
+        context->errorDirectionConflictsUnknownMovement = 0;
+        context->errorEmergencyNotYetRecoverable = 0;
+        
         // Regions
         _scc_R0_ManualDriveModeInference_tick(context);
         _scc_R1_VehicleMovement_tick(context);

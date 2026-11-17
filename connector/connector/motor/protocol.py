@@ -115,18 +115,24 @@ class MotorProtocol:
                 # Create Status from status data fields and validate via pydantic
                 new_status = Status(
                     received_at=datetime.now(),
-                    remote_control=status_msg.remote_control,
                     error=status_msg.error,
                     errors=status_errors,
+                    remote_control=status_msg.remote_control,
+                    connection_established=status_msg.connection_established,
                     mode=status_msg.mode,
                     target_speed=(status_msg.target_rpm * MOTOR_SPEED_TRANSMISSION_FACTOR),
                     motor_speed=(status_msg.motor_rpm * MOTOR_SPEED_TRANSMISSION_FACTOR),
                     internal_state=InternalState(
                         time_ms=status_msg.time + time_overflow_offset,
-                        connection_established=status_msg.connection_established,
                         target_rpm=status_msg.target_rpm,
                         motor_rpm=status_msg.motor_rpm,
-                        control_rpm=status_msg.control_rpm
+                        detected_movement=status_msg.detected_movement,
+                        switch_remote_control=status_msg.switch_remote_control,
+                        switch_forward=status_msg.switch_forward,
+                        switch_reverse=status_msg.switch_reverse,
+                        throttle_lever_rpm=status_msg.throttle_lever_rpm,
+                        control_rpm=status_msg.control_rpm,
+                        brake_value=status_msg.brake_value
                     )
                 )
                 logger.info("Status received: %s", new_status)

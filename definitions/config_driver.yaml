@@ -17,10 +17,14 @@ driver_panel_display_speed_refresh_delay_ms:
   value: 100 # 10 fps
   c_type: int
   comment: "Delay in millis between speed value updates on the display. When the mode changes the value will be updated immediately."
-driver_throttle_reading_reaction_threshold_rpm:
-  value: 22 # 0.3 km/h
+driver_throttle_lever_moving_average_window_size:
+  value: 30
   c_type: int
-  comment: "Threshold in RPM reacting to target speed changes read from the throttle lever. If the difference between reading and current target speed (as absolute value) exceeds this threshold, the target speed will be updated. This only affects the manual control mode."
+  comment: "Window size for the moving average calculation of the throttle lever. This affects the smoothing of the throttle input in manual control mode."
+driver_throttle_lever_granularity:
+  value: 2
+  c_type: int
+  comment: "Granularity of the throttle lever rpm value. Changes below this value will be ignored. This only affects the manual control mode."
 driver_modes_emergency_recovery_time_ms:
   value: 3000
   c_type: int

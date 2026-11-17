@@ -39,13 +39,21 @@ typedef uint8_t ControlPayloadType; // 3bit
 #define MOTOR 2
 #define CONFIG 3
 
+typedef uint8_t DetectedMovement; // 2bit
+
+#define NO_MOVEMENT 0
+#define MOVEMENT_FORWARD 1
+#define MOVEMENT_REVERSE 2
+#define MOVEMENT_UNKNOWN_DIRECTION 3
+
 // Number of bytes to encode struct StatusMessage
-#define BYTES_LENGTH_STATUS_MESSAGE 11
+#define BYTES_LENGTH_STATUS_MESSAGE 14
 
 struct StatusMessage {
     // // System state
     // If an error occurred an error appendix message will follow directly after this message!
     ErrorState error; // 2bit
+    // Indicates whether the system is currently under remote control or not.
     bool remote_control; // 1bit
     // Time since system start in ms. Receiving end must handle overflows!
     uint32_t time; // 32bit
@@ -58,7 +66,16 @@ struct StatusMessage {
     uint16_t motor_rpm; // 13bit
     uint16_t target_rpm; // 13bit
     // // Internal state
+    // Switches
+    bool switch_remote_control; // 1bit
+    bool switch_forward; // 1bit
+    bool switch_reverse; // 1bit
+    uint16_t throttle_lever_rpm; // 13bit
+    // Safety automata state
+    DetectedMovement detected_movement; // 2bit
+    // Speed control
     uint16_t control_rpm; // 13bit
+    bool brake_value; // 1bit
 };
 
 // Number of bytes to encode struct ErrorAppendixMessage

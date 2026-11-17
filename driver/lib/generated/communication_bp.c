@@ -25,9 +25,18 @@ int EncodeStatusMessage(struct StatusMessage *m, unsigned char *s) {
     s[8] = (((unsigned char *)&((*m).target_rpm))[0] >> 4) & 15;
     s[8] |= (((unsigned char *)&((*m).target_rpm))[1] << 4) & 240;
     s[9] = (((unsigned char *)&((*m).target_rpm))[1] >> 4) & 1;
-    s[9] |= (((unsigned char *)&((*m).control_rpm))[0] << 1) & 254;
-    s[10] = (((unsigned char *)&((*m).control_rpm))[0] >> 7) & 1;
-    s[10] |= (((unsigned char *)&((*m).control_rpm))[1] << 1) & 62;
+    s[9] |= (((unsigned char *)&((*m).switch_remote_control))[0] << 1) & 2;
+    s[9] |= (((unsigned char *)&((*m).switch_forward))[0] << 2) & 4;
+    s[9] |= (((unsigned char *)&((*m).switch_reverse))[0] << 3) & 8;
+    s[9] |= (((unsigned char *)&((*m).throttle_lever_rpm))[0] << 4) & 240;
+    s[10] = (((unsigned char *)&((*m).throttle_lever_rpm))[0] >> 4) & 15;
+    s[10] |= (((unsigned char *)&((*m).throttle_lever_rpm))[1] << 4) & 240;
+    s[11] = (((unsigned char *)&((*m).throttle_lever_rpm))[1] >> 4) & 1;
+    s[11] |= (((unsigned char *)&((*m).detected_movement))[0] << 1) & 6;
+    s[11] |= (((unsigned char *)&((*m).control_rpm))[0] << 3) & 248;
+    s[12] = (((unsigned char *)&((*m).control_rpm))[0] >> 5) & 7;
+    s[12] |= (((unsigned char *)&((*m).control_rpm))[1] << 3) & 248;
+    s[13] = (((unsigned char *)&((*m).brake_value))[0] ) & 1;
     return 0;
 }
 
@@ -54,9 +63,18 @@ int DecodeStatusMessage(struct StatusMessage *m, unsigned char *s) {
     ((unsigned char *)&((*m).target_rpm))[0] |= (s[8] << 4) & 240;
     ((unsigned char *)&((*m).target_rpm))[1] = (s[8] >> 4) & 15;
     ((unsigned char *)&((*m).target_rpm))[1] |= (s[9] << 4) & 16;
-    ((unsigned char *)&((*m).control_rpm))[0] = (s[9] >> 1) & 127;
-    ((unsigned char *)&((*m).control_rpm))[0] |= (s[10] << 7) & 128;
-    ((unsigned char *)&((*m).control_rpm))[1] = (s[10] >> 1) & 31;
+    ((unsigned char *)&((*m).switch_remote_control))[0] = (s[9] >> 1) & 1;
+    ((unsigned char *)&((*m).switch_forward))[0] = (s[9] >> 2) & 1;
+    ((unsigned char *)&((*m).switch_reverse))[0] = (s[9] >> 3) & 1;
+    ((unsigned char *)&((*m).throttle_lever_rpm))[0] = (s[9] >> 4) & 15;
+    ((unsigned char *)&((*m).throttle_lever_rpm))[0] |= (s[10] << 4) & 240;
+    ((unsigned char *)&((*m).throttle_lever_rpm))[1] = (s[10] >> 4) & 15;
+    ((unsigned char *)&((*m).throttle_lever_rpm))[1] |= (s[11] << 4) & 16;
+    ((unsigned char *)&((*m).detected_movement))[0] = (s[11] >> 1) & 3;
+    ((unsigned char *)&((*m).control_rpm))[0] = (s[11] >> 3) & 31;
+    ((unsigned char *)&((*m).control_rpm))[0] |= (s[12] << 5) & 224;
+    ((unsigned char *)&((*m).control_rpm))[1] = (s[12] >> 3) & 31;
+    ((unsigned char *)&((*m).brake_value))[0] = (s[13] ) & 1;
     return 0;
 }
 

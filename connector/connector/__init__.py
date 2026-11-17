@@ -10,7 +10,7 @@ CONNECTOR_ROOT_LOGGER = logging.getLogger("connector")
 from .control_center import ControlCenter
 from .errors import ConnectionProblem
 from .motor.connection import MotorConnection
-from .motor.data import Control, Status, Mode, ErrorState, InternalState
+from .motor.data import Control, Status, Mode, DetectedMovement, ErrorState, InternalState
 from .power.connection import PowerSensorConnection
 from .power.data import PowerConsumption
 from .gnss.connection import GNSSConnection
@@ -22,6 +22,7 @@ __all__ = [
     "Control",
     "Status",
     "Mode",
+    "DetectedMovement",
     "ErrorState",
     "InternalState",
     "PowerSensorConnection",

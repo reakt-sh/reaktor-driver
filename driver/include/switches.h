@@ -1,7 +1,5 @@
 #pragma once
 
-#include "mode.h"
-
 /**
  * Setup the detection of manual switches and control for command switches.
  *
@@ -24,16 +22,3 @@ bool isManualForwardSwitchEngaged();
  */
 bool isManualReverseSwitchEngaged();
 
-/**
- * Set the brake signal to the given state.
- *
- * @param engaged true to engage the brake, false to release
- */
-void setBrakeSignal(bool engaged);
-
-/**
- * Set the direction signal according to the given drive mode.
- *
- * @param mode the drive mode to set the signal for
- */
-void setDirectionSignal(tDriveMode mode);

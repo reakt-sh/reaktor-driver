@@ -13,7 +13,9 @@ const int ERROR_COMM_CONNECTION_NOT_ESTABLISHED = 1;
 const char* ERROR_COMM_CONNECTION_NOT_ESTABLISHED_MESSAGE = "A control message was received without a successful connection handshake beforehand.";
 const int ERROR_REMOTE_CONTROL_TIMEOUT = 2;
 const char* ERROR_REMOTE_CONTROL_TIMEOUT_MESSAGE = "While in active remote control mode, no control (or heartbeat) message was received in the expected interval.";
-const int ERROR_HARDWARE_NO_THROTTLE_DAC = 3;
+const int ERROR_SETUP_FAILED = 3;
+const char* ERROR_SETUP_FAILED_MESSAGE = "Setup of the driver failed. System is not in operational state.";
+const int ERROR_HARDWARE_NO_THROTTLE_DAC = 4;
 const char* ERROR_HARDWARE_NO_THROTTLE_DAC_MESSAGE = "No connection to motor throttle control component (DAC via I2C).";
 const int ERROR_MODES_MANUAL_MODE_SWITCH_CONFLICTING = 5;
 const char* ERROR_MODES_MANUAL_MODE_SWITCH_CONFLICTING_MESSAGE = "Hardware malfuntion in manual mode switch. Both directions are active.";
@@ -31,8 +33,8 @@ const char* ERROR_MAP[] = {
    "Connection refused due to protocol version mismatch between driver and remote control.",
    "A control message was received without a successful connection handshake beforehand.",
    "While in active remote control mode, no control (or heartbeat) message was received in the expected interval.",
+   "Setup of the driver failed. System is not in operational state.",
    "No connection to motor throttle control component (DAC via I2C).",
-   NULL,
    "Hardware malfuntion in manual mode switch. Both directions are active.",
    "Vehicle is moving while in parking mode.",
    "Requested movement direction opposes the current movement direction of the vehicle.",

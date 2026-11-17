@@ -3,7 +3,7 @@
 
 # Configuration parameters for the communication between driver and connector
 
-COMM_PROTOCOL_VERSION = 1 # Version number of the communication protocol.
+COMM_PROTOCOL_VERSION = 2 # Version number of the communication protocol.
 COMM_SERIAL_BAUDRATE = 115200 # Serial communication speed.
 COMM_MESSAGE_ACKNOWLEDGEMENT_CODE_BITSIZE = 8 # Number of bits used to encode the acknowledgement code in status and control messages.
 COMM_STATUS_MESSAGE_TIME_BITSIZE = 32 # Number of bits used to encode the internal time in status messages.

@@ -8,8 +8,7 @@
 
 #include "debug.h"
 #include "revolutions.h"
-#include "speed.h"
-#include "mode.h"
+#include "safety.h"
 #include "error.h"
 
 // Variables
@@ -38,7 +37,13 @@ struct StatusMessage status = {
     .mode = NEUTRAL,
     .motor_rpm = 0,
     .target_rpm = 0,
-    .control_rpm = 0
+    .switch_remote_control = false,
+    .switch_forward = false,
+    .switch_reverse = false,
+    .throttle_lever_rpm = 0,
+    .detected_movement = NO_MOVEMENT,
+    .control_rpm = 0,
+    .brake_value = false,
 };
 
 // ====================
@@ -51,34 +56,36 @@ bool setupCommunication() {
     return true;
 }
 
-bool handleCommunication(bool remoteControlEnabled, tControlCommand* command) {
-    // Note in status whether remote control is active
-    status.remote_control = remoteControlEnabled;
+bool handleCommunication(bool remoteControlRequested, tControlCommand* command, bool* newControlReceived) {
     // Check input buffer for data
     // Loop time will usually be faster than serial input, so there won't be much data
-    while (Serial.available() > 0) {
+    bool messageProcessed = false;
+    while (Serial.available() > 0 && !messageProcessed) {
         // Read data
         messageBuffer[messageBufferPosition] = (byte) Serial.read();
         messageBufferPosition++;
 
         // Process data
-        // Only process one message at a time (matched cases must return), to ensure each message can be acknowledged
+        // Only process one message at a time (matched cases set messageProcessed), to ensure each message can be acknowledged
         switch (expectedMessage) {
             case ExpectedMessage::CONTROL_ANNOUNCEMENT_MESSAGE:
                 if (messageBufferPosition >= BYTES_LENGTH_CONTROL_ANNOUNCEMENT_MESSAGE) {
                     processControlAnnouncementMessage();
 
                     messageBufferPosition = 0; // Reset buffer position for next message
-                    return false;
+                    messageProcessed = true;
                 }
                 break;
             case ExpectedMessage::MOTOR_CONTROL_MESSAGE:
                 if (messageBufferPosition >= BYTES_LENGTH_MOTOR_CONTROL_MESSAGE) {
-                    bool control = processMotorMessage(remoteControlEnabled, command);
+                    bool newControl = processMotorMessage(!remoteControlRequested, command);
+                    if (newControlReceived != NULL) {
+                        *newControlReceived = newControl;
+                    }
 
                     expectedMessage = ExpectedMessage::CONTROL_ANNOUNCEMENT_MESSAGE; // Reset expected message type
                     messageBufferPosition = 0; // Reset buffer position for next message
-                    return control;
+                    messageProcessed = true;
                 }
                 break;
             case ExpectedMessage::CONNECTION_CONTROL_MESSAGE:
@@ -87,7 +94,7 @@ bool handleCommunication(bool remoteControlEnabled, tControlCommand* command) {
 
                     expectedMessage = ExpectedMessage::CONTROL_ANNOUNCEMENT_MESSAGE; // Reset expected message type
                     messageBufferPosition = 0; // Reset buffer position for next message
-                    return false;
+                    messageProcessed = true;
                 }
                 break;
             case ExpectedMessage::CONFIGURATION_CONTROL_MESSAGE:
@@ -96,22 +103,21 @@ bool handleCommunication(bool remoteControlEnabled, tControlCommand* command) {
 
                     expectedMessage = ExpectedMessage::CONTROL_ANNOUNCEMENT_MESSAGE; // Reset expected message type
                     messageBufferPosition = 0; // Reset buffer position for next message
-                    return false;
+                    messageProcessed = true;
                 }
                 break;
         }
     }
 
     // Check for connection timeout if in remote control mode
-    if (remoteControlEnabled && isConnected && (millis() - lastControlMessageTime > COMM_CONTROL_MESSAGE_HEARTBEAT_TIME)) {
+    if (remoteControlRequested && isConnected && (millis() - lastControlMessageTime > COMM_CONTROL_MESSAGE_HEARTBEAT_TIME)) {
         // No message received in a while, disable remote control and issue emergency stop
-        triggerEmergencyStop();
         registerError(ERROR_REMOTE_CONTROL_TIMEOUT);
         sendStatusReport(true); // Might be futile but send a status report anyway
         isConnected = false; // Assume peer is gone
     }
 
-    return false;
+    return isConnected;
 }
 
 void sendStatusReport(bool force) {
@@ -141,6 +147,10 @@ void sendStatusReport(bool force) {
 
         Serial.flush(); // Ensure all data is sent
     }
+}
+
+tStatusMessage* getNextStatusReport() {
+    return &status;
 }
 
 
@@ -195,7 +205,7 @@ void processControlAnnouncementMessage() {
  *
  * @returns true if a valid control command was processed, false otherwise.
  */
-bool processMotorMessage(bool remoteControlEnabled, tControlCommand* command) {
+bool processMotorMessage(bool ignore, tControlCommand* command) {
     if (messageBufferPosition >= BYTES_LENGTH_MOTOR_CONTROL_MESSAGE) {
         // Update last control message time
         lastControlMessageTime = millis();
@@ -211,7 +221,7 @@ bool processMotorMessage(bool remoteControlEnabled, tControlCommand* command) {
         if (!isConnected) {
             registerError(ERROR_COMM_CONNECTION_NOT_ESTABLISHED);
             return false;
-        } else if (remoteControlEnabled) {
+        } else if (ignore && command != NULL) {
             // Actual remote control commands
             command->mode = (DriveMode) motorMessage.mode;
             command->target_rpm = motorMessage.target_rpm;
@@ -272,8 +282,4 @@ void updateStatus () {
     status.time = millis();
     status.connection_established = isConnected;
     status.control_acknowledgement = controlAcknowledgement;
-    status.mode = (Mode) getCurrentMode();
-    status.motor_rpm = getRevolutionsPerMinute();
-    status.target_rpm = getTargetRPM();
-    status.control_rpm = getControlRPM();
 }

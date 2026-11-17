@@ -5,10 +5,6 @@
 
 #include "panel.h"
 
-#include "debug.h"
-#include "mode.h"
-#include "switches.h"
-#include "speed.h"
 #include "error.h"
 
 // Constants
@@ -81,8 +77,8 @@ bool setupPanel() {
     return true;
 }
 
-void updatePanel() {
-    tDriveMode currentMode = getCurrentMode();
+void updatePanel(int currentSpeedRPM, tControlCommand* safeControl, bool remoteControlActive) {
+    tDriveMode currentMode = safeControl->mode;
 
     // Update the LED on the panel based on the current mode
     switch (currentMode) {
@@ -149,9 +145,8 @@ void updatePanel() {
         }
     }
     // Control source
-    bool remoteControl = isRemoteControlSwitchEngaged(); // FIXME This should come from modes not hardware
-    if (currentMode != EMERGENCY_STOP && ((remoteControl && displayStateControlSource != DISPLAY_STATE_CONTROL_REMOTE) || (!remoteControl && displayStateControlSource != DISPLAY_STATE_CONTROL_MANUAL))) {
-        if (remoteControl) {
+    if (currentMode != EMERGENCY_STOP && ((remoteControlActive && displayStateControlSource != DISPLAY_STATE_CONTROL_REMOTE) || (!remoteControlActive && displayStateControlSource != DISPLAY_STATE_CONTROL_MANUAL))) {
+        if (remoteControlActive) {
             setDisplayText(1, 0, "RC ", 3);
             displayStateControlSource = DISPLAY_STATE_CONTROL_REMOTE;
         } else {
@@ -159,23 +154,21 @@ void updatePanel() {
             displayStateControlSource = DISPLAY_STATE_CONTROL_MANUAL;
         }
     }
-
     // Current speed
     char speedTextBuffer[4];
     if (forceSpeedUpdate || millis() - displayLastUpdate >= DRIVER_PANEL_DISPLAY_SPEED_REFRESH_DELAY_MS) {
         displayLastUpdate = millis();
-        int actualCurrentRPM = getCurrentRPM();
-        if (actualCurrentRPM != displayStateCurrentSpeed) {
-            displayStateCurrentSpeed = actualCurrentRPM;
-            formatDisplaySpeed(speedTextBuffer, actualCurrentRPM);
+        if (currentSpeedRPM != displayStateCurrentSpeed) {
+            displayStateCurrentSpeed = currentSpeedRPM;
+            formatDisplaySpeed(speedTextBuffer, currentSpeedRPM);
             setDisplayText(0, 7, speedTextBuffer, 4);
         }
     }
     // Target speed
-    int actualTargetRPM = getTargetRPM();
-    if (actualTargetRPM != displayStateTargetSpeed) {
-        displayStateTargetSpeed = actualTargetRPM;
-        formatDisplaySpeed(speedTextBuffer, actualTargetRPM);
+    int currentTargetRPM = safeControl->target_rpm;
+    if (currentTargetRPM != displayStateTargetSpeed) {
+        displayStateTargetSpeed = currentTargetRPM;
+        formatDisplaySpeed(speedTextBuffer, currentTargetRPM);
         setDisplayText(1, 7, speedTextBuffer, 4);
     }
 }

@@ -6,17 +6,13 @@
 
 #include "speed.h"
 
-#include "debug.h"
-#include "revolutions.h"
-#include "throttle.h"
-#include "mode.h"
-#include "switches.h"
+#include "motor.h"
+#include "communication.h"
 
 // Configuration
 const int PID_SAMPLE_TIME = 25; // PID calculation interval in ms
 // Variables
-int currentRPM = 0;  // Current speed in RPM
-int targetRPM = 0;   // Target speed in RPM
+int targetRPM = 0; // Target speed in RPM in last control cycle
 int appliedRPM = 0;  // Applied speed in RPM in last control cycle
 bool decelerationBraking = false; // Flag to indicate that the vehicle should brake for deceleration (target RPM was reduced or speed overshoot was detected)
 bool keepZero = true; // Keep speed at 0 RPM until first non-zero target is set
@@ -41,34 +37,19 @@ bool setupSpeedHandler() {
     return true;
 }
 
-void setTargetRPM(int rpm) {
-    if (rpm < targetRPM) {
+void controlSpeed(int currentRPM, tControlCommand* safeControl) {
+    if (safeControl->target_rpm < targetRPM) {
         // Target speed was reduced, activate braking for deceleration
         decelerationBraking = true;
     }
-    targetRPM = rpm;
-}
-
-int getTargetRPM() {
-    return targetRPM;
-}
-
-int getCurrentRPM() {
-    return currentRPM;
-}
-
-int getControlRPM() {
-    return appliedRPM;
-}
-
-void controlSpeed() {
-    currentRPM = getRevolutionsPerMinute();
-    int mode = getCurrentMode();
+    targetRPM = safeControl->target_rpm;
+    int mode = safeControl->mode;
+    bool brake = false;
 
     // 1. Handle braking
     if (mode == PARKING || mode == EMERGENCY_STOP) {
         // Always brake in parking or emergency stop mode
-        setBrakeSignal(true);
+        brake = true;
         decelerationBraking = false; // Reset deceleration braking flag, as we are braking anyway
     } else if (mode == DRIVE_FORWARD || mode == DRIVE_REVERSE) {
         if (targetRPM > 0) {
@@ -80,27 +61,28 @@ void controlSpeed() {
                 if (targetRPM >= currentRPM || currentRPM - targetRPM <= DRIVER_BRAKING_DECELERATION_OFFSET_RPM) {
                     // Braking no longer needed if target speed indicates acceleration
                     // or difference to current speed is below the threshold
-                    setBrakeSignal(false);
+                    brake = false;
                     // Deactivate deceleration braking behavior
                     decelerationBraking = false;
                 } else {
                     // Apply brake based on speed difference
                     // TODO: Implement analogous braking behavior as soon as supported by hardware
-                    setBrakeSignal(true);
+                    brake = true;
                 }
             } else {
                 // Release brake in case no braking is needed or target speed is nearly reached
-                setBrakeSignal(false);
+                brake = false;
             }
         } else {
             // Try to keep the vehicle at a standstill
-            setBrakeSignal(true);
+            brake = true;
         }
     } else {
         // In all other cases, release brake
-        setBrakeSignal(false);
+        brake = false;
         decelerationBraking = false; // Reset deceleration braking flag, as we are deliberatly not braking
     }
+    setBrakeSignal(brake);
 
     // 2. Handle speed via pid controller
 
@@ -131,6 +113,12 @@ void controlSpeed() {
         appliedRPM = (int) pidOutput;
     }
     setMotorThrottle(appliedRPM);
+
+    // Update the status record that will be sent to the remote control
+    tStatusMessage* status = getNextStatusReport();
+    status->motor_rpm = currentRPM;
+    status->control_rpm = appliedRPM;
+    status->brake_value = brake;
 }
 
 // ====================

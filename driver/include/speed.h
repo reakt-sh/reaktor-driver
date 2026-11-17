@@ -1,5 +1,7 @@
 #pragma once
 
+#include <control_command.h>
+
 /**
  * Setup the speed control handler.
  *
@@ -8,27 +10,10 @@
 bool setupSpeedHandler();
 
 /**
- * Set the target RPM for the motor.
- */
-void setTargetRPM(int rpm);
-
-/**
- * Get the current target RPM.
- */
-int getTargetRPM();
-
-/**
- * Get the current RPM of the motor.
- * This value is only up-to-date after calling controlSpeed().
- */
-int getCurrentRPM();
-
-/**
- * Get the currently applied RPM.
- */
-int getControlRPM();
-/**
  * Control motor speed.
+ *
+ * @param currentRPM The current RPM of the motor.
+ * @param safeControl The computed safe control command to apply.
  */
-void controlSpeed();
+void controlSpeed(int currentRPM, tControlCommand* safeControl);
 
