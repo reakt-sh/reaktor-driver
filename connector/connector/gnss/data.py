@@ -16,12 +16,12 @@ class GNSSMode(Enum):
 
 class Position(BaseModel):
     """GNSS position data."""
-    time: datetime
+    received_at: datetime
     mode: GNSSMode
     latitude: Optional[float] # Latitude in degrees
     longitude: Optional[float] # Longitude in degrees
     speed: Optional[float] # Speed in meters per second
     gps_time: Optional[datetime] # GPS time in UTC
     raw: dict # Raw GNSS data as a dictionary
-    last_sky_report: Optional[dict] # Last sky report data as a dictionary
-    last_noise_report: Optional[dict] # Last noise report data as a dictionary
+    previous_sky_report: Optional[dict] # Last sky report data as a dictionary
+    previous_noise_report: Optional[dict] # Last noise report data as a dictionary

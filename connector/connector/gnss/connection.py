@@ -53,16 +53,18 @@ class GNSSConnection(DataProvider[Position]):
                             logger.debug(f"Received: {msg}")
                             if msg.get("class") == "TPV":
                                 position = Position(
-                                    time=datetime.now(),
+                                    received_at=datetime.now(),
                                     mode=GNSSMode(msg.get("mode")) if msg.get("mode") is not None else GNSSMode.NO_FIX,
                                     latitude=msg.get("lat"),
                                     longitude=msg.get("lon"),
                                     speed=msg.get("speed"),
                                     gps_time=datetime.fromisoformat(msg.get("time")) if msg.get("time") else None,
                                     raw=msg.__dict__,
-                                    last_sky_report=last_sky_report,
-                                    last_noise_report=last_noise_report
+                                    previous_sky_report=last_sky_report,
+                                    previous_noise_report=last_noise_report
                                 )
+                                last_noise_report = None
+                                last_sky_report = None
                                 self._handle_data(position)
                             elif msg.get("class") == "SKY":
                                 last_sky_report = msg.__dict__.copy()
