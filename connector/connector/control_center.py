@@ -156,7 +156,7 @@ class ControlCenter:
             self._live_data.start()
 
     async def reconnect(self):
-        """Issue a reconnect to on all devices."""
+        """Reconnect all devices."""
         if not self._ports:
             logger.error("Cannot reconnect: Not started yet.")
             return
