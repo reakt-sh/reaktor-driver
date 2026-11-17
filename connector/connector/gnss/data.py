@@ -16,7 +16,7 @@ class GNSSMode(Enum):
 
 class Position(BaseModel):
     """GNSS position data."""
-    time: datetime
+    received_at: datetime
     mode: GNSSMode
     latitude: Optional[float] # Latitude in degrees
     longitude: Optional[float] # Longitude in degrees

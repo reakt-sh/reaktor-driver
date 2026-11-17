@@ -53,7 +53,7 @@ class GNSSConnection(DataProvider[Position]):
                             logger.debug(f"Received: {msg}")
                             if msg.get("class") == "TPV":
                                 position = Position(
-                                    time=datetime.now(),
+                                    received_at=datetime.now(),
                                     mode=GNSSMode(msg.get("mode")) if msg.get("mode") is not None else GNSSMode.NO_FIX,
                                     latitude=msg.get("lat"),
                                     longitude=msg.get("lon"),

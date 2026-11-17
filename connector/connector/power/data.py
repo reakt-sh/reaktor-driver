@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 class PowerConsumption(BaseModel):
     """Power consumption data."""
-    time: datetime
+    received_at: datetime
     voltage_v: float # Voltage in volts
     current_a: float # Current in amperes
     power_w: float   # Power in watts
