@@ -80,10 +80,10 @@ class PowerSensorProtocol:
                 # Create record and validate via pydantic
                 new_data = PowerConsumption(
                     time=datetime.now(),
-                    voltage=voltage_v,
-                    current=current_a,
-                    power=power_w,
-                    energy=energy_wh,
+                    voltage_v=voltage_v,
+                    current_a=current_a,
+                    power_w=power_w,
+                    energy_wh=energy_wh,
                     high_voltage_alarm=high_voltage_alarm,
                     low_voltage_alarm=low_voltage_alarm,
                 )

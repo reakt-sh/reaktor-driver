@@ -60,9 +60,11 @@ class GNSSConnection(DataProvider[Position]):
                                     speed=msg.get("speed"),
                                     gps_time=datetime.fromisoformat(msg.get("time")) if msg.get("time") else None,
                                     raw=msg.__dict__,
-                                    last_sky_report=last_sky_report,
-                                    last_noise_report=last_noise_report
+                                    previous_sky_report=last_sky_report,
+                                    previous_noise_report=last_noise_report
                                 )
+                                last_noise_report = None
+                                last_sky_report = None
                                 self._handle_data(position)
                             elif msg.get("class") == "SKY":
                                 last_sky_report = msg.__dict__.copy()

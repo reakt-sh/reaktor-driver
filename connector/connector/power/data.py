@@ -8,9 +8,9 @@ from pydantic import BaseModel
 class PowerConsumption(BaseModel):
     """Power consumption data."""
     time: datetime
-    voltage: float # Voltage in volts
-    current: float # Current in amperes
-    power: float   # Power in watts
-    energy: float # Energy in watt-hours
+    voltage_v: float # Voltage in volts
+    current_a: float # Current in amperes
+    power_w: float   # Power in watts
+    energy_wh: float # Energy in watt-hours
     high_voltage_alarm: bool
     low_voltage_alarm: bool
