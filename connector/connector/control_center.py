@@ -31,7 +31,9 @@ class ControlCenter:
     _latest_gnss_data: dict # Latest GNSS data snapshot
     _data_storage: AsyncTextIOWrapper # File handle for data storage
     _motor_connection: MotorConnection # Connection to the REAKTOR
+    _use_power_meter: bool # Flag to indicate if power meter is used
     _power_connection: PowerSensorConnection # Connection to the power sensor
+    _use_gnss: bool # Flag to indicate if GNSS is used
     _gnss_connection: GNSSConnection # Connection to the GNSS
     _ports: SerialPorts # Serial ports for motor and power sensor
     _live_data: LiveDataServer # Web server for live data broadcasting
@@ -43,17 +45,21 @@ class ControlCenter:
         self._motor_connection = MotorConnection()
         self._motor_connection.add_data_listener(self._handle_status)
         # Power Meter Connection
+        self._use_power_meter = True
         self._power_connection = PowerSensorConnection(poll_delay_ms=power_sensor_poll_delay_ms)
         # GNSS Connection
+        self._use_gnss = True
         self._gnss_connection = GNSSConnection()
         # Live Data Server
         self._live_data = LiveDataServer(port=live_data_port)
         # Storage
         self.store_data = store_data
+        self._storage_folder = None
         self._session = None
         self._setup_storage(storage_dir, log_level)
         self._latest_power_data = None
         self._latest_gnss_data = None
+        self._data_storage = None
 
     def _setup_storage(self, storage_dir: str, log_level: int):
         """Setup storage directory and session identifier."""
@@ -115,54 +121,70 @@ class ControlCenter:
                 await self._live_data.broadcast(data_str)
         # else: Errors are already in log
 
-    async def start(self, live_data: bool = False):
+    async def start(self, power_meter: bool = True, gnss: bool = True, live_data: bool = False):
         """Start the observation system."""
         logger.debug("Starting.")
         if self._data_storage:
             logger.warning("Control center already started.")
             return
+
         # Init data storage
         self._data_storage = await aiofiles.open(join(self._storage_folder, f"{self._session}.jsonl"), "w", encoding="utf-8")
+
         # Devices
         self._ports = await get_serial_ports()
+
         # Open connection to driver
         logger.debug("Opening connection to REAKTOR motor driver on port %s", self._ports.motor)
         await self._motor_connection.open(self._ports.motor)
-        # Open connection to power meter
-        logger.debug("Opening connection to REAKTOR power meter on port %s", self._ports.power)
-        await self._power_connection.open(self._ports.power)
-        # Open connection to GNSS
-        logger.debug("Opening connection to GNSS receiver.")
-        await self._gnss_connection.open()
+
+        self._use_power_meter = power_meter
+        if power_meter:
+            # Open connection to power meter
+            logger.debug("Opening connection to REAKTOR power meter on port %s", self._ports.power)
+            await self._power_connection.open(self._ports.power)
+
+        self._use_gnss = gnss
+        if gnss:
+            # Open connection to GNSS
+            logger.debug("Opening connection to GNSS receiver.")
+            await self._gnss_connection.open()
+
         # Start live data server
         if live_data:
             logger.debug("Starting live data server on port %d.", self._live_data.port)
             self._live_data.start()
 
     async def reconnect(self):
-        """Issue a reconnecto on all devices."""
+        """Issue a reconnect to on all devices."""
         if not self._ports:
             logger.error("Cannot reconnect: Not started yet.")
             return
         logger.debug("Reconnecting.")
         # Close connections
         self._motor_connection.close()
-        self._power_connection.close()
-        self._gnss_connection.close()
+        if self._use_power_meter:
+            self._power_connection.close()
+        if self._use_gnss:
+            self._gnss_connection.close()
         # Reopen connections
         logger.debug("Reopening connection to motor driver on port %s", self._ports.motor)
         await self._motor_connection.open(self._ports.motor)
-        logger.debug("Reopening connection to power meter on port %s", self._ports.power)
-        await self._power_connection.open(self._ports.power)
-        logger.debug("Reopening connection to GNSS receiver.")
-        await self._gnss_connection.open()
+        if self._use_power_meter:
+            logger.debug("Reopening connection to power meter on port %s", self._ports.power)
+            await self._power_connection.open(self._ports.power)
+        if self._use_gnss:
+            logger.debug("Reopening connection to GNSS receiver.")
+            await self._gnss_connection.open()
 
     async def stop(self):
         """Stop the observation system."""
         logger.debug("Stopping.")
         self._motor_connection.close()
-        self._power_connection.close()
-        self._gnss_connection.close()
+        if self._use_power_meter:
+            self._power_connection.close()
+        if self._use_gnss:
+            self._gnss_connection.close()
         if self._live_data.is_running():
             self._live_data.stop()
         if self._data_storage:
