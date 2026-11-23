@@ -33,7 +33,7 @@ DAC_STEPS = 4095 # Number of steps in MCP 4725 (12 bit).
 ADC_STEPS = 1023 # Number of steps in Arduino ADC (10 bit).
 
 # Motor specifications
-MOTOR_MAX_RPM = 1125 # Maximum motor speed in RPM.
+MOTOR_MAX_RPM = 1450 # Maximum motor speed in RPM.
 MOTOR_MIN_RPM = 45 # Motor will not move at speed lower than this. This will also influences the waiting time until the motor is considered stopped.
 MOTOR_SIGNAL_EDGES_PER_REVOLUTION = 3 # Number of signal edges (rising edges) per motor revolution. E.g. for a hall sensor with 3 magnets this is 3. Note that only every third edge is a full revolution.
 

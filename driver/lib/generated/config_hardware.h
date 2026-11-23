@@ -36,7 +36,7 @@ const uint32_t DAC_STEPS = (1 << int(12)) - 1; // Number of steps in MCP 4725 (1
 const uint32_t ADC_STEPS = (1 << int(10)) - 1; // Number of steps in Arduino ADC (10 bit).
 
 // Motor specifications
-const unsigned int MOTOR_MAX_RPM = 1125; // Maximum motor speed in RPM.
+const unsigned int MOTOR_MAX_RPM = 1450; // Maximum motor speed in RPM.
 const unsigned int MOTOR_MIN_RPM = 45; // Motor will not move at speed lower than this. This will also influences the waiting time until the motor is considered stopped.
 const int MOTOR_SIGNAL_EDGES_PER_REVOLUTION = 3; // Number of signal edges (rising edges) per motor revolution. E.g. for a hall sensor with 3 magnets this is 3. Note that only every third edge is a full revolution.
 

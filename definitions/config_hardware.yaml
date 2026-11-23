@@ -113,8 +113,8 @@ adc_steps:
 doc_motor:
   comment: "Motor specifications"
 
-motor_max_rpm:
-  value: 1125 # 4500 # Reduced RPM for safety during testing (Synchronize with Motor Controller settings!)
+motor_max_rpm: # This value needs to be synchronized with the motor controller settings!
+  value: 1450 # 4500 # Reduced RPM for safety during testing (1450 RPM is about 20 km/h)
   c_type: unsigned int
   comment: "Maximum motor speed in RPM."
 motor_min_rpm:
