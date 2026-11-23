@@ -2,6 +2,7 @@
 User-facing control center bundling all capabilities and sensors of the REAKTOR.
 """
 import logging
+import asyncio
 from json import dumps
 from os import makedirs
 from os.path import exists, isdir, isfile, join
@@ -167,6 +168,7 @@ class ControlCenter:
             self._power_connection.close()
         if self._use_gnss:
             self._gnss_connection.close()
+        await asyncio.sleep(.05) # Wait a bit before reconnecting
         # Reopen connections
         logger.debug("Reopening connection to motor driver on port %s", self._ports.motor)
         await self._motor_connection.open(self._ports.motor)

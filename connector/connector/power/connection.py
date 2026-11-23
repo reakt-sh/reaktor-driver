@@ -66,6 +66,7 @@ class PowerSensorConnection(DataProvider[PowerConsumption]):
                             self._polling_task = None
                             # Close all
                             self.close()
+                            await asyncio.sleep(.05) # Wait a bit before reconnecting
                             # Restore task
                             self._polling_task = my_task
                             # Reopen connection
